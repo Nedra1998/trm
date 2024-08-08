@@ -3,7 +3,20 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
-#include <version.hpp>
+#include <tracy/Tracy.hpp>
+
+#include "ppm.hpp"
+#include "version.hpp"
+
+void *operator new(std ::size_t count) {
+  auto ptr = malloc(count);
+  TracyAlloc(ptr, count);
+  return ptr;
+}
+void operator delete(void *ptr) noexcept {
+  TracyFree(ptr);
+  free(ptr);
+}
 
 int main(int argc, char *argv[]) {
 
@@ -37,6 +50,18 @@ int main(int argc, char *argv[]) {
   }
 
   SPDLOG_INFO("trm v{}", TRM_VERSION);
+
+  float *img = new float[256 * 256 * 3];
+  for (std::size_t y = 0; y < 256; ++y) {
+    for (std::size_t x = 0; x < 256; ++x) {
+      std::size_t index = y * 256 + x;
+      img[index * 3 + 0] = static_cast<float>(x) / 255.0f;
+      img[index * 3 + 1] = static_cast<float>(y) / 255.0f;
+      img[index * 3 + 2] = 0.25f;
+    }
+  }
+
+  trm::ppm::write("output.ppm", 256, 256, img, false);
 
   return 0;
 }

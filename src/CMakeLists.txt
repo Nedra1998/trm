@@ -39,7 +39,7 @@ list(APPEND HEADERS ${CMAKE_CURRENT_BINARY_DIR}/version.hpp)
 add_library(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_20)
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
 target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog TracyClient)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})

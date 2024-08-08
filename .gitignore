@@ -1,3 +1,10 @@
+# ---> General
+# Build directory
+build/
+
+# Cache directory
+.cache/
+
 # ---> C++
 # Prerequisites
 *.d
