@@ -2,11 +2,10 @@ cmake_minimum_required(VERSION 3.22)
 
 # === Project ===
 project(
-    "trm"
-    VERSION 0.1.0
-    DESCRIPTION "Tiny Ray Marcher"
-    LANGUAGES CXX
-)
+  "trm"
+  VERSION 0.1.0
+  DESCRIPTION "Tiny Ray Marcher"
+  LANGUAGES C CXX)
 
 # === Options ===
 option(TMP_ENABLE_PROFILING "Enable profiling" OFF)
