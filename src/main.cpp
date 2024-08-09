@@ -5,7 +5,8 @@
 #include <spdlog/spdlog.h>
 #include <tracy/Tracy.hpp>
 
-#include "ppm.hpp"
+#include "img.hpp"
+#include "render.hpp"
 #include "version.hpp"
 
 void *operator new(std ::size_t count) {
@@ -30,8 +31,7 @@ int main(int argc, char *argv[]) {
 
   if (is_tty) {
     auto logger = spdlog::stderr_color_mt("trm");
-    logger->set_pattern("[\033[90m%Y-%m-%d %H:%M:%S.%e\033[0m] [\033[36m%n\033[0m] [%^%l%$] "
-                        "[\033[35m%s:%#\033[0m] %v");
+    logger->set_pattern("\033[90m%H:%M:%S.%e\033[0m  %^%-7l%$  %v");
     spdlog::set_default_logger(logger);
   } else {
     auto logger = spdlog::stderr_logger_mt("trm");
@@ -51,17 +51,18 @@ int main(int argc, char *argv[]) {
 
   SPDLOG_INFO("trm v{}", TRM_VERSION);
 
-  float *img = new float[256 * 256 * 3];
-  for (std::size_t y = 0; y < 256; ++y) {
-    for (std::size_t x = 0; x < 256; ++x) {
-      std::size_t index = y * 256 + x;
-      img[index * 3 + 0] = static_cast<float>(x) / 255.0f;
-      img[index * 3 + 1] = static_cast<float>(y) / 255.0f;
-      img[index * 3 + 2] = 0.25f;
-    }
-  }
+  trm::Image img = trm::render();
+  // trm::Image img(256, 256, trm::Buffer::COLOR);
+  // for (std::size_t y = 0; y < 256; ++y) {
+  //   for (std::size_t x = 0; x < 256; ++x) {
+  //     std::size_t index = y * 256 + x;
+  //     img.color[index * 3 + 0] = static_cast<float>(x) / 255.0f;
+  //     img.color[index * 3 + 1] = static_cast<float>(y) / 255.0f;
+  //     img.color[index * 3 + 2] = 0.25f;
+  //   }
+  // }
 
-  trm::ppm::write("output.ppm", 256, 256, img, false);
+  img.write("output.png", trm::Buffer::NORMAL);
 
   return 0;
 }
