@@ -12,7 +12,7 @@ namespace trm {
     std::uint32_t material;
   };
 
-  Image render(bool show_progress = true);
+  Image render(std::string_view pattern, bool progressive = false);
   std::tuple<Vec3, Vec3, Vec3, Float> trace(const Ray &r, std::size_t depth = 0);
   std::tuple<Float, std::uint32_t> ray_march(const Ray &r);
 

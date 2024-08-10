@@ -35,12 +35,12 @@ bool trm::Image::write(std::string_view path, Buffer buffer) {
     switch (buffer) {
     case Buffer::COLOR:
       for (std::size_t i = 0; i < color.size(); ++i) {
-        img[i] = static_cast<uint8_t>(color[i] * 255.0f);
+        img[i] = static_cast<uint8_t>(max(0.0f, min(1.0f, color[i])) * 255.0f);
       }
       break;
     case Buffer::ALBIDO:
       for (std::size_t i = 0; i < albido.size(); ++i) {
-        img[i] = static_cast<uint8_t>(albido[i] * 255.0f);
+        img[i] = static_cast<uint8_t>(max(0.0f, min(1.0f, albido[i])) * 255.0f);
       }
       break;
     case Buffer::NORMAL:
@@ -51,9 +51,11 @@ bool trm::Image::write(std::string_view path, Buffer buffer) {
           img[i + 2] = 0;
           continue;
         } else {
-          img[i] = static_cast<uint8_t>((normal[i] * 0.5f + 0.5f) * 255.0f);
-          img[i + 1] = static_cast<uint8_t>((normal[i + 1] * 0.5f + 0.5f) * 255.0f);
-          img[i + 2] = static_cast<uint8_t>((normal[i + 2] * 0.5f + 0.5f) * 255.0f);
+          img[i] = static_cast<uint8_t>((max(-1.0f, min(1.0f, normal[i])) * 0.5f + 0.5f) * 255.0f);
+          img[i + 1] =
+              static_cast<uint8_t>((max(-1.0f, min(1.0f, normal[i + 1])) * 0.5f + 0.5f) * 255.0f);
+          img[i + 2] =
+              static_cast<uint8_t>((max(-1.0f, min(1.0f, normal[i + 2])) * 0.5f + 0.5f) * 255.0f);
         }
       }
       break;

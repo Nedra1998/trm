@@ -1,5 +1,7 @@
 #include "render.hpp"
 
+#include <chrono>
+
 #include <glm/gtc/matrix_transform.hpp>
 #include <indicators/cursor_control.hpp>
 #include <indicators/progress_bar.hpp>
@@ -28,70 +30,93 @@ trm::Vec3 trm::hemisphere(const Float &u1, const Float &u2) {
   return Vec3(cos(phi) * r, sin(phi) * r, u1);
 }
 
-trm::Image trm::render(bool show_progress) {
-  std::size_t width = 128, height = 128, samples = 512;
+trm::Image trm::render(std::string_view pattern, bool progressive) {
+  std::size_t width = 512, height = 512, samples = 256;
   Image img(width, height);
 
   Mat4 view = inverse(lookAtLH(Vec3(0.0f, 0.0f, -6.0f), Vec3(0.0f), Vec3(0.0f, 1.0f, 0.0f)));
   Float filmz = width / (2.0f * tan(0.5f * 1.5707f));
   Vec3 origin = view * Vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
-  ProgressBar bar{
-      option::BarWidth{40},
-      option::Start{"["},
-      option::Fill{"="},
-      option::Lead{">"},
-      option::Remainder{" "},
-      option::End{"]"},
-      option::PrefixText{"Rendering... "},
-      option::ShowPercentage{true},
-      option::ShowElapsedTime{true},
-      option::ShowRemainingTime{true},
-  };
+  std::chrono::time_point<std::chrono::high_resolution_clock> start =
+      std::chrono::high_resolution_clock::now();
 
-  if (show_progress) {
-    show_console_cursor(false);
-  }
-
-  for (std::size_t i = 0; i < width * height; ++i) {
-    if (show_progress) {
-      bar.set_progress(100.0f * static_cast<float>(i) / static_cast<float>(width * height));
-    }
-    std::size_t x = i % width;
-    std::size_t y = i / width;
-
-    Vec3 color(0.0f, 0.0f, 0.0f);
-    Vec3 albedo(0.0f, 0.0f, 0.0f);
-    Vec3 normal(0.0f, 0.0f, 0.0f);
-    Float depth = 0.0f;
-
+  if (progressive) {
     for (std::size_t s = 0; s < samples; ++s) {
-      Ray ray(origin,
-              view * Vec4(x - width / 2.0f + frand(), y - height / 2.0f + frand(), filmz, 0.0f));
-      const auto [c, a, n, d] = trace(ray);
-      color += c / (Float)samples;
-      albedo += a / (Float)samples;
-      normal += n / (Float)samples;
-      depth += d / (Float)samples;
+      for (std::size_t i = 0; i < width * height; ++i) {
+        std::size_t x = i % width;
+        std::size_t y = i / width;
+
+        if ((s * width * height + i) % 10000 == 0) {
+          float progress = (float)(s * width * height + i) / (float)(samples * width * height);
+          const auto diff = std::chrono::high_resolution_clock::now() - start;
+          const float elapsed = std::chrono::duration<float>(diff).count();
+          const float remaining = elapsed / progress - elapsed;
+          std::string bar = std::format(
+              "[{:40}]", std::string((int)(40.0f * progress), '=') + (progress < 1.0f ? ">" : "") +
+                             std::string(40 - (int)(40.0f * progress), ' '));
+          SPDLOG_INFO("{} {} {:3.0f}% [{:02}:{:02}<{:02}:{:02}]", pattern, bar, progress * 100.0f,
+                      (int)elapsed / 60, (int)elapsed % 60, (int)remaining / 60,
+                      (int)remaining % 60);
+        }
+
+        Ray ray(origin,
+                view * Vec4(x - width / 2.0f + frand(), y - height / 2.0f + frand(), filmz, 0.0f));
+        const auto [c, a, n, d] = trace(ray);
+
+        Float adjust = ((Float)s + 1.0f) / ((Float)s + 2.0f);
+        Float demon = 1.0f / ((Float)s + 1.0f);
+        img.color[i * 3 + 0] = img.color[i * 3 + 0] * adjust + c.r * demon;
+        img.color[i * 3 + 1] = img.color[i * 3 + 1] * adjust + c.g * demon;
+        img.color[i * 3 + 2] = img.color[i * 3 + 2] * adjust + c.b * demon;
+
+        img.albido[i * 3 + 0] = img.albido[i * 3 + 0] * adjust + a.r * demon;
+        img.albido[i * 3 + 1] = img.albido[i * 3 + 1] * adjust + a.g * demon;
+        img.albido[i * 3 + 2] = img.albido[i * 3 + 2] * adjust + a.b * demon;
+
+        img.normal[i * 3 + 0] = img.normal[i * 3 + 0] * adjust + n.r * demon;
+        img.normal[i * 3 + 1] = img.normal[i * 3 + 1] * adjust + n.g * demon;
+        img.normal[i * 3 + 2] = img.normal[i * 3 + 2] * adjust + n.b * demon;
+
+        img.depth[i] = img.depth[i] * adjust + d * demon;
+      }
+
+      img.write(std::format("{}color.{:03d}.png", pattern, s), Buffer::COLOR);
     }
+  } else {
+    for (std::size_t i = 0; i < width * height; ++i) {
+      std::size_t x = i % width;
+      std::size_t y = i / width;
 
-    img.color[i * 3 + 0] = clamp(color.r, 0.0f, 1.0f);
-    img.color[i * 3 + 1] = clamp(color.g, 0.0f, 1.0f);
-    img.color[i * 3 + 2] = clamp(color.b, 0.0f, 1.0f);
+      Vec3 color(0.0f, 0.0f, 0.0f);
+      Vec3 albedo(0.0f, 0.0f, 0.0f);
+      Vec3 normal(0.0f, 0.0f, 0.0f);
+      Float depth = 0.0f;
 
-    img.albido[i * 3 + 0] = clamp(albedo.r, 0.0f, 1.0f);
-    img.albido[i * 3 + 1] = clamp(albedo.g, 0.0f, 1.0f);
-    img.albido[i * 3 + 2] = clamp(albedo.b, 0.0f, 1.0f);
+      for (std::size_t s = 0; s < samples; ++s) {
+        Ray ray(origin,
+                view * Vec4(x - width / 2.0f + frand(), y - height / 2.0f + frand(), filmz, 0.0f));
+        const auto [c, a, n, d] = trace(ray);
+        color += c / (Float)samples;
+        albedo += a / (Float)samples;
+        normal += n / (Float)samples;
+        depth += d / (Float)samples;
+      }
 
-    img.normal[i * 3 + 0] = clamp(normal.x, -1.0f, 1.0f);
-    img.normal[i * 3 + 1] = clamp(normal.y, -1.0f, 1.0f);
-    img.normal[i * 3 + 2] = clamp(normal.z, -1.0f, 1.0f);
+      img.color[i * 3 + 0] = clamp(color.r, 0.0f, 1.0f);
+      img.color[i * 3 + 1] = clamp(color.g, 0.0f, 1.0f);
+      img.color[i * 3 + 2] = clamp(color.b, 0.0f, 1.0f);
 
-    img.depth[i] = depth;
-  }
+      img.albido[i * 3 + 0] = clamp(albedo.r, 0.0f, 1.0f);
+      img.albido[i * 3 + 1] = clamp(albedo.g, 0.0f, 1.0f);
+      img.albido[i * 3 + 2] = clamp(albedo.b, 0.0f, 1.0f);
 
-  if (show_progress) {
-    show_console_cursor(true);
+      img.normal[i * 3 + 0] = clamp(normal.x, -1.0f, 1.0f);
+      img.normal[i * 3 + 1] = clamp(normal.y, -1.0f, 1.0f);
+      img.normal[i * 3 + 2] = clamp(normal.z, -1.0f, 1.0f);
+
+      img.depth[i] = depth;
+    }
   }
 
   return img;

@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
 
   SPDLOG_INFO("trm v{}", TRM_VERSION);
 
-  trm::Image img = trm::render();
+  trm::Image img = trm::render("out/", false);
   // trm::Image img(256, 256, trm::Buffer::COLOR);
   // for (std::size_t y = 0; y < 256; ++y) {
   //   for (std::size_t x = 0; x < 256; ++x) {
