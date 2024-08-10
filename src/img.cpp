@@ -4,79 +4,95 @@
 
 #include "stb_image_write.h"
 
+template <> struct std::formatter<trm::Buffer, char> : std::formatter<std::string, char> {
+  auto format(trm::Buffer v, std::format_context &ctx) {
+    std::string value_name;
+    switch (v) {
+    case trm::Buffer::COLOR:
+      value_name = "color";
+      break;
+    case trm::Buffer::DEPTH:
+      value_name = "depth";
+      break;
+    case trm::Buffer::NORMAL:
+      value_name = "normal";
+      break;
+    case trm::Buffer::ALBIDO:
+      value_name = "albido";
+      break;
+    }
+    return std::formatter<std::string>::format(value_name, ctx);
+  }
+};
+
 bool trm::Image::write(std::string_view path, Buffer buffer) {
 
-  if (buffer & Buffer::COLOR && color.empty()) {
-    SPDLOG_ERROR("Color buffer is empty");
-    return false;
-  } else if (buffer & Buffer::ALBIDO && albido.empty()) {
-    SPDLOG_ERROR("Albido buffer is empty");
-    return false;
-  } else if (buffer & Buffer::NORMAL && normal.empty()) {
-    SPDLOG_ERROR("Normal buffer is empty");
-    return false;
-  } else if (buffer & Buffer::DEPTH && depth.empty()) {
-    SPDLOG_ERROR("Depth buffer is empty");
-    return false;
-  }
-
-  std::string_view buffer_str;
   std::size_t buffer_size = width * height * ((buffer == Buffer::DEPTH) ? 1 : 3);
-  std::vector<Float>::const_iterator it, end;
-  switch (buffer) {
-  case Buffer::COLOR:
-    buffer_str = "color";
-    it = color.cbegin();
-    end = color.cend();
-    break;
-  case Buffer::ALBIDO:
-    buffer_str = "albido";
-    it = albido.cbegin();
-    end = albido.cend();
-    break;
-  case Buffer::NORMAL:
-    buffer_str = "normal";
-    it = normal.cbegin();
-    end = normal.cend();
-    break;
-  case Buffer::DEPTH:
-    buffer_str = "depth";
-    it = depth.cbegin();
-    end = depth.cend();
-    break;
-  }
-
   std::string_view ext = path.substr(path.find_last_of('.') + 1);
   if (ext == "png" || ext == "bmp" || ext == "tga" || ext == "jpg") {
     std::vector<uint8_t> img(buffer_size);
 
-    std::size_t i = 0;
-    if (buffer == Buffer::NORMAL) {
-      while (it != end) {
-        img[i++] = static_cast<uint8_t>((*it * 0.5f + 0.5f) * 255.0f);
-        ++it;
+    switch (buffer) {
+    case Buffer::COLOR:
+      for (std::size_t i = 0; i < color.size(); ++i) {
+        img[i] = static_cast<uint8_t>(color[i] * 255.0f);
       }
-    } else {
-      while (it != end) {
-        img[i++] = static_cast<uint8_t>(*it * 255.0f);
-        ++it;
+      break;
+    case Buffer::ALBIDO:
+      for (std::size_t i = 0; i < albido.size(); ++i) {
+        img[i] = static_cast<uint8_t>(albido[i] * 255.0f);
       }
+      break;
+    case Buffer::NORMAL:
+      for (std::size_t i = 0; i < normal.size(); i += 3) {
+        if (normal[i] == 0.0f && normal[i + 1] == 0.0f && normal[i + 2] == 0.0f) {
+          img[i] = 0;
+          img[i + 1] = 0;
+          img[i + 2] = 0;
+          continue;
+        } else {
+          img[i] = static_cast<uint8_t>((normal[i] * 0.5f + 0.5f) * 255.0f);
+          img[i + 1] = static_cast<uint8_t>((normal[i + 1] * 0.5f + 0.5f) * 255.0f);
+          img[i + 2] = static_cast<uint8_t>((normal[i + 2] * 0.5f + 0.5f) * 255.0f);
+        }
+      }
+      break;
+    case Buffer::DEPTH:
+      Float min_depth = std::numeric_limits<Float>::infinity(), max_depth = 0.0f;
+      for (std::size_t i = 0; i < depth.size(); ++i) {
+        if (depth[i] < min_depth)
+          min_depth = depth[i];
+        if (depth[i] >= 100.0f)
+          continue;
+        if (depth[i] > max_depth)
+          max_depth = depth[i];
+      }
+      for (std::size_t i = 0; i < depth.size(); ++i) {
+        if (depth[i] >= max_depth) {
+          img[i] = 0;
+        } else {
+          img[i] = static_cast<uint8_t>(
+              (1.0f - ((depth[i] - min_depth) / (max_depth - min_depth))) * 255.0f);
+        }
+      }
+      break;
     }
 
+    stbi_flip_vertically_on_write(true);
     if (ext == "png") {
-      SPDLOG_INFO("Writting {} buffer to png file {}", buffer_str, path);
+      // SPDLOG_INFO("Writting {} buffer to png file {}", buffer, path);
       return stbi_write_png(path.data(), width, height, (buffer == Buffer::DEPTH) ? 1 : 3,
                             img.data(), width * ((buffer == Buffer::DEPTH) ? 1 : 3)) != 0;
     } else if (ext == "bmp") {
-      SPDLOG_INFO("Writting {} buffer to bmp file {}", buffer_str, path);
+      // SPDLOG_INFO("Writting {} buffer to bmp file {}", buffer, path);
       return stbi_write_bmp(path.data(), width, height, (buffer == Buffer::DEPTH) ? 1 : 3,
                             img.data()) != 0;
     } else if (ext == "tga") {
-      SPDLOG_INFO("Writting {} buffer to tga file {}", buffer_str, path);
+      // SPDLOG_INFO("Writting {} buffer to tga file {}", buffer, path);
       return stbi_write_tga(path.data(), width, height, (buffer == Buffer::DEPTH) ? 1 : 3,
                             img.data()) != 0;
     } else if (ext == "jpg") {
-      SPDLOG_INFO("Writting {} buffer to jpg file {}", buffer_str, path);
+      // SPDLOG_INFO("Writting {} buffer to jpg file {}", buffer, path);
       return stbi_write_jpg(path.data(), width, height, (buffer == Buffer::DEPTH) ? 1 : 3,
                             img.data(), 100) != 0;
     }
@@ -84,20 +100,29 @@ bool trm::Image::write(std::string_view path, Buffer buffer) {
   } else if (ext == "hdr") {
     std::vector<float> img(buffer_size);
 
-    std::size_t i = 0;
-    if (buffer == Buffer::NORMAL) {
-      while (it != end) {
-        img[i++] = *it * 0.5f + 0.5f;
-        ++it;
+    switch (buffer) {
+    case Buffer::COLOR:
+      for (std::size_t i = 0; i < color.size(); ++i) {
+        img[i] = static_cast<float>(color[i]);
       }
-    } else {
-      while (it != end) {
-        img[i++] = *it;
-        ++it;
+      break;
+    case Buffer::ALBIDO:
+      for (std::size_t i = 0; i < albido.size(); ++i) {
+        img[i] = static_cast<float>(albido[i]);
       }
+      break;
+    case Buffer::NORMAL:
+      for (std::size_t i = 0; i < normal.size(); ++i) {
+        img[i] = static_cast<float>(normal[i]);
+      }
+      break;
+    case Buffer::DEPTH:
+      for (std::size_t i = 0; i < depth.size(); ++i) {
+        img[i] = static_cast<float>(depth[i]);
+      }
+      break;
     }
-
-    SPDLOG_INFO("Writting {} buffer to hdr file {}", buffer_str, path);
+    // SPDLOG_INFO("Writting {} buffer to hdr file {}", buffer, path);
     return stbi_write_hdr(path.data(), width, height, (buffer == Buffer::DEPTH) ? 1 : 3,
                           img.data()) != 0;
   } else {

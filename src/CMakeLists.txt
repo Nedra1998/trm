@@ -17,6 +17,11 @@ CPMAddPackage(
   GIT_TAG v3.1 EXCLUDE_FROM_ALL TRUE SYSTEM TRUE)
 
 CPMAddPackage(
+  NAME indicators
+  GITHUB_REPOSITORY p-ranav/indicators
+  GIT_TAG v2.3 EXCLUDE_FROM_ALL TRUE SYSTEM TRUE)
+
+CPMAddPackage(
   NAME glm
   GITHUB_REPOSITORY g-truc/glm
   GIT_TAG 1.0.1 EXCLUDE_FROM_ALL TRUE SYSTEM TRUE)
@@ -37,7 +42,8 @@ add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
 target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
-target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog TracyClient glm::glm)
+target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog TracyClient glm::glm
+                                             indicators::indicators)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
                                                   ${CMAKE_CURRENT_BINARY_DIR})
 

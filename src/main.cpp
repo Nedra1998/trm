@@ -62,7 +62,10 @@ int main(int argc, char *argv[]) {
   //   }
   // }
 
-  img.write("output.png", trm::Buffer::NORMAL);
+  img.write("color.png", trm::Buffer::COLOR);
+  img.write("albedo.png", trm::Buffer::ALBIDO);
+  img.write("depth.png", trm::Buffer::DEPTH);
+  img.write("normal.png", trm::Buffer::NORMAL);
 
   return 0;
 }

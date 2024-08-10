@@ -18,16 +18,9 @@ namespace trm {
   inline Buffer &operator^=(Buffer &a, Buffer b) { return (Buffer &)((int &)a ^= (int)b); }
 
   struct Image {
-    Image(std::size_t width, std::size_t height, Buffer buffer) : width(width), height(height) {
-      if (buffer & Buffer::COLOR)
-        color.resize(width * height * 3);
-      if (buffer & Buffer::ALBIDO)
-        albido.resize(width * height * 3);
-      if (buffer & Buffer::NORMAL)
-        normal.resize(width * height * 3);
-      if (buffer & Buffer::DEPTH)
-        depth.resize(width * height);
-    }
+    Image(std::size_t width, std::size_t height)
+        : width(width), height(height), color(width * height * 3), albido(width * height * 3),
+          normal(width * height * 3), depth(width * height) {}
 
     std::size_t width, height;
     std::vector<Float> color;
