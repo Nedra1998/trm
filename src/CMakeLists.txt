@@ -1,9 +1,14 @@
 # === Dependencies ===
 CPMAddPackage(
+  NAME fmt
+  GITHUB_REPOSITORY fmtlib/fmt
+  GIT_TAG 11.0.2 EXCLUDE_FROM_ALL TRUE SYSTEM TRUE)
+
+CPMAddPackage(
   NAME spdlog
   GITHUB_REPOSITORY gabime/spdlog
   GIT_TAG "v1.14.1"
-  OPTIONS "SPDLOG_USE_STD_FORMAT ON" EXCLUDE_FROM_ALL TRUE SYSTEM TRUE)
+  OPTIONS "SPDLOG_FMT_EXTERNAL ON" EXCLUDE_FROM_ALL TRUE SYSTEM TRUE)
 
 CPMAddPackage(
   NAME tracy
@@ -17,11 +22,6 @@ CPMAddPackage(
   GIT_TAG v3.1 EXCLUDE_FROM_ALL TRUE SYSTEM TRUE)
 
 CPMAddPackage(
-  NAME indicators
-  GITHUB_REPOSITORY p-ranav/indicators
-  GIT_TAG v2.3 EXCLUDE_FROM_ALL TRUE SYSTEM TRUE)
-
-CPMAddPackage(
   NAME glm
   GITHUB_REPOSITORY g-truc/glm
   GIT_TAG 1.0.1 EXCLUDE_FROM_ALL TRUE SYSTEM TRUE)
@@ -30,25 +30,18 @@ CPMAddPackage(
 string(TOUPPER ${PROJECT_NAME} PROJECT_NAME_UPPER)
 configure_file(version.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/version.hpp)
 
-# === Library ===
+# === Executable ===
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c")
 file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS "*.hpp")
-list(FILTER SOURCES EXCLUDE REGEX "main.cpp")
 list(APPEND HEADERS ${CMAKE_CURRENT_BINARY_DIR}/version.hpp)
 
-add_library(${PROJECT_NAME} ${SOURCES} ${HEADERS})
-add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+add_executable(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
-target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
-target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog TracyClient glm::glm
-                                             indicators::indicators)
+target_compile_definitions(${PROJECT_NAME} PUBLIC -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
+target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog fmt::fmt TracyClient glm::glm
+                                             argparse::argparse)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
                                                   ${CMAKE_CURRENT_BINARY_DIR})
-
-# === Executable ===
-file(GLOB_RECURSE EXEC_SOURCES CONFIGURE_DEPENDS "main.cpp")
-add_executable(${PROJECT_NAME}-bin ${EXEC_SOURCES})
-set_target_properties(${PROJECT_NAME}-bin PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
-target_link_libraries(${PROJECT_NAME}-bin PRIVATE ${PROJECT_NAME}::${PROJECT_NAME} argparse)

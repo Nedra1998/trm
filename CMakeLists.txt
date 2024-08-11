@@ -8,11 +8,10 @@ project(
   LANGUAGES C CXX)
 
 # === Options ===
-option(TMP_ENABLE_PROFILING "Enable profiling" OFF)
-option(TMP_ENABLE_SANITIZERS "Enable sanitizers" OFF)
+option(TRM_ENABLE_PROFILING "Enable profiling" OFF)
+option(TRM_ENABLE_SANITIZERS "Enable sanitizers" OFF)
 
-option(TMP_BUILD_TESTS "Build tests" ON)
-option(TMP_BUILD_DOCS "Build documentation" OFF)
+option(TRM_BUILD_DOCS "Build documentation" OFF)
 
 # === Dependencies ===
 include(cmake/CPM.cmake)
@@ -26,12 +25,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # === Targets ===
 add_subdirectory("src")
 
-if(TMP_BUILD_TESTS)
-  enable_testing()
-  add_subdirectory("tst")
-endif()
-
-if(TMP_BUILD_DOCS)
+if(TRM_BUILD_DOCS)
   add_subdirectory("doc")
 endif()
 
@@ -57,9 +51,8 @@ message(STATUS "  Source directory: ${CMAKE_SOURCE_DIR}")
 message(STATUS "  Binary directory: ${CMAKE_BINARY_DIR}")
 message(STATUS "")
 message(STATUS "Features:")
-message(STATUS "  Profiling enabled: ${TMP_ENABLE_PROFILING}")
-message(STATUS "  Sanitizers enabled: ${TMP_ENABLE_SANITIZERS}")
+message(STATUS "  Profiling enabled: ${TRM_ENABLE_PROFILING}")
+message(STATUS "  Sanitizers enabled: ${TRM_ENABLE_SANITIZERS}")
 message(STATUS "")
 message(STATUS "Targets:")
-message(STATUS "  Build tests: ${TMP_BUILD_TESTS}")
-message(STATUS "  Build documentation: ${TMP_BUILD_DOCS}")
+message(STATUS "  Build documentation: ${TRM_BUILD_DOCS}")

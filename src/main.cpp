@@ -1,4 +1,5 @@
 #include <argparse/argparse.hpp>
+#include <common/TracyVersion.hpp>
 #include <spdlog/cfg/env.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/stdout_sinks.h>
@@ -6,6 +7,7 @@
 #include <tracy/Tracy.hpp>
 
 #include "img.hpp"
+#include "log.hpp"
 #include "render.hpp"
 #include "version.hpp"
 
@@ -31,7 +33,7 @@ int main(int argc, char *argv[]) {
 
   if (is_tty) {
     auto logger = spdlog::stderr_color_mt("trm");
-    logger->set_pattern("\033[90m%H:%M:%S.%e\033[0m  %^%-7l%$  %v");
+    logger->set_pattern("[\033[90m%H:%M:%S.%e\033[0m] [%^%-7l%$]  %v");
     spdlog::set_default_logger(logger);
   } else {
     auto logger = spdlog::stderr_logger_mt("trm");
@@ -49,23 +51,29 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  SPDLOG_INFO("trm v{}", TRM_VERSION);
+  LOG_INFO("trm v{}", TRM_VERSION);
+#ifdef TRACY_ENABLE
+  LOG_INFO("Tracy Profiling v{}.{}.{}", (int)tracy::Version::Major, (int)tracy::Version::Minor,
+           (int)tracy::Version::Patch);
+#endif
 
-  trm::Image img = trm::render("out/", false);
-  // trm::Image img(256, 256, trm::Buffer::COLOR);
-  // for (std::size_t y = 0; y < 256; ++y) {
-  //   for (std::size_t x = 0; x < 256; ++x) {
-  //     std::size_t index = y * 256 + x;
-  //     img.color[index * 3 + 0] = static_cast<float>(x) / 255.0f;
-  //     img.color[index * 3 + 1] = static_cast<float>(y) / 255.0f;
-  //     img.color[index * 3 + 2] = 0.25f;
-  //   }
+  trm::Image img(1024, 1024);
+  trm::Renderer renderer;
+  renderer.camera = trm::Camera{
+      .pos = {0.0f, 0.0f, -6.0f},
+      .center = {0.0f, 0.0f, 0.0f},
+      .up = {0.0f, 1.0f, 0.0f},
+      .fov = 1.5707f,
+  };
+
+  renderer.render(img, 256);
+  img.write("out/{buffer}.{samples:03}.png", trm::Buffer::ALL);
+
+  // for (std::size_t samples = 0; samples < 10; ++samples) {
+  //   renderer.render(img, max(2, (1 << samples)));
+  //   img.write("out/{buffer}.{samples:03}.png", trm::Buffer::ALL);
+  //   FrameMark;
   // }
-
-  img.write("color.png", trm::Buffer::COLOR);
-  img.write("albedo.png", trm::Buffer::ALBIDO);
-  img.write("depth.png", trm::Buffer::DEPTH);
-  img.write("normal.png", trm::Buffer::NORMAL);
 
   return 0;
 }
