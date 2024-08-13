@@ -38,11 +38,6 @@ double trm::Renderer::render(Image &img, std::uint32_t samples) {
     std::size_t x = i % img.width;
     std::size_t y = i / img.width;
 
-    if (x == 0) {
-      FrameMark;
-      LOG_TRACE("Rendering pixel ({},{})", x, y);
-    }
-
     PixelTraceResult pixel;
     {
       ZoneScopedN("render_pixel");
@@ -141,11 +136,13 @@ std::tuple<trm::Float, std::uint32_t> trm::Renderer::ray_march(const Ray &r) {
   ZoneScoped;
   Float delta = 0.0;
   std::uint32_t obj = 0;
-  for (Float t = 0.0; t < max_dist; t += delta) {
+  std::int32_t steps = 0;
+  for (Float t = 0.0; t < max_dist && steps < max_steps; t += delta) {
     std::tie(delta, obj) = sdf(r.o + r.d * t);
     if (delta < epsilon) {
       return {t + delta, obj};
     }
+    ++steps;
   }
   return {max_dist, 0};
 }

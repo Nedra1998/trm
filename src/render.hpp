@@ -24,7 +24,7 @@ namespace trm {
 
   class Renderer {
   public:
-    std::uint32_t max_depth = 16;
+    std::uint32_t max_depth = 16, max_steps = 2048;
     Float epsilon = 1e-5f;
     Float max_dist = 1e5f;
     Float bias = 10.0f * epsilon;

@@ -9,6 +9,7 @@
 using namespace trm;
 using namespace glm;
 
+// clang-format off
 static trm::Mat4 transforms[] = {
     Mat4(1.0f),
     Mat4(1.0f),
@@ -18,7 +19,8 @@ static trm::Mat4 transforms[] = {
     Mat4(1.0f),
     translate(Mat4(1.0f), Vec3(4.0f, -0.5f, 4.0f)),
     translate(Mat4(1.0f), Vec3(0.5, -2.0, 3.0)),
-    translate(rotate(Mat4(1.0f), -0.785375f, Vec3(1.0, 0.0, -1.0)), Vec3(-3.0, 0.0, 3.0))};
+    translate(rotate(Mat4(1.0f), -0.785375f, Vec3(1.0, 0.0, -1.0)), Vec3(-3.0, 0.0, 3.0))
+};
 
 static trm::Mat4 inverses[] = {
     Mat4(1.0f),
@@ -29,7 +31,8 @@ static trm::Mat4 inverses[] = {
     Mat4(1.0f),
     translate(Mat4(1.0f), -Vec3(4.0f, -0.5f, 4.0f)),
     translate(Mat4(1.0f), -Vec3(-0.5, -2.0, 3.0)),
-    translate(rotate(Mat4(1.0f), 0.785375f, Vec3(1.0, 0.0, -1.0)), -Vec3(-3.0, 0.0, 3.0))};
+    translate(rotate(Mat4(1.0f), 0.785375f, Vec3(1.0, 0.0, -1.0)), -Vec3(-3.0, 0.0, 3.0))
+};
 
 static std::function<Float(Vec3)> objects[] = {
     [](Vec3 p) { return dot(p, Vec3(0.0f, 1.0f, 0.0f)) - -3.5f; },   // Floor
@@ -44,7 +47,8 @@ static std::function<Float(Vec3)> objects[] = {
     //   return length(max(q, 0.0f)) + min(max(q.x, max(q.y, q.z)), 0.0f);
     // },
     [](Vec3 p) { return length(p) - 1.5f; },
-    [](Vec3 p) { return length(Vec2(length(p.xz()) - 3.0f, p.y)) - 0.75f; }};
+    [](Vec3 p) { return length(Vec2(length(p.xz()) - 3.0f, p.y)) - 0.75f; }
+};
 
 trm::Mat trm::mats[] = {
     {DIFFUSE, Vec3(1.0f, 1.0f, 1.0f), 0.0f, 0.0f, 0.0f},          // Floor
@@ -57,6 +61,7 @@ trm::Mat trm::mats[] = {
     {SPECULAR, Vec3(1.0f, 1.0f, 1.0f), 0.0f, 0.0f, 0.0f},
     {REFRACTIVE, Vec3(1.0f, 1.0f, 1.0f), 0.0f, 0.0f, 1.5f},
 };
+// clang-format on
 
 std::tuple<trm::Float, std::uint32_t> trm::sdf(Vec3 p) {
   Float dist = std::numeric_limits<Float>::infinity();
