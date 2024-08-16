@@ -9,7 +9,7 @@
 #include "rand.hpp"
 #include "scene.hpp"
 
-void trm::ons(const Vec3 &v1, Vec3 &v2, Vec3 &v3) {
+void trm::orthonormal_basis(const Vec3 &v1, Vec3 &v2, Vec3 &v3) {
   if (abs(v1.x) > abs(v1.y)) {
     Float inv_len = 1.0 / sqrt(v1.x * v1.x + v1.z * v1.z);
     v2 = Vec3(-v1.z * inv_len, 0.0, v1.x * inv_len);
@@ -60,6 +60,9 @@ double trm::Renderer::render(Image &img, std::uint32_t samples) {
     img.normal[i * 3 + 1] = (weight * img.normal[i * 3 + 1]) + pixel.normal.g;
     img.normal[i * 3 + 2] = (weight * img.normal[i * 3 + 2]) + pixel.normal.b;
     img.depth[i] = (weight * img.depth[i]) + pixel.depth;
+
+    if (i % 1000 == 0)
+      progress_callback(1000, i, img.width * img.height);
   }
   img.samples += samples;
   return std::chrono::duration<double>(std::chrono::high_resolution_clock::now() - start).count();
@@ -67,15 +70,8 @@ double trm::Renderer::render(Image &img, std::uint32_t samples) {
 
 trm::Renderer::PixelTraceResult trm::Renderer::trace(const Ray &r, const std::size_t depth) {
   ZoneScoped;
-  Float rr_weight = 1.0;
   if (depth >= max_depth) {
-    if (features & Features::RUSSIAN_ROULETTE && frand() > russian_roulette) {
-      rr_weight = 1.0f / (1.0f - russian_roulette);
-    } else {
-      return {};
-    }
-    if (depth >= 2 * max_depth)
-      return {};
+    return {};
   }
 
   const auto [t, id] = ray_march(r);
@@ -84,28 +80,28 @@ trm::Renderer::PixelTraceResult trm::Renderer::trace(const Ray &r, const std::si
   }
 
   Vec3 p = r.o + r.d * t;
-  Vec3 normal = norm(p, id - 1);
-  Mat material = mats[id - 1];
+  Vec3 normal = (r.material == id) ? -norm(p, id - 1) : norm(p, id - 1);
+  Material material = mats[id - 1];
 
   switch (material.shading) {
     case EMISSIVE:
       {
-        return {material.emission * material.color, material.color, normal, t};
+        return {material.color * material.emission, material.color, normal, t};
         break;
       }
 
     case DIFFUSE:
       {
         Vec3 rotx, roty;
-        ons(normal, rotx, roty);
+        orthonormal_basis(normal, rotx, roty);
         Vec3 sampled_dir = hemisphere(frand(), frand());
-        Vec3 rotated_dir(dot(Vec3(rotx.x, roty.x, normal.x), sampled_dir),
-                         dot(Vec3(rotx.y, roty.y, normal.y), sampled_dir),
-                         dot(Vec3(rotx.z, roty.z, normal.z), sampled_dir));
-        Float cost = dot(rotated_dir, normal);
-        const auto result = trace(Ray(p + (bias * rotated_dir), rotated_dir), depth + 1);
-        return {result.color * cost * material.color * rr_weight * 0.25f, material.color, normal,
-                t};
+        Vec3 direction(dot(Vec3(rotx.x, roty.x, normal.x), sampled_dir),
+                       dot(Vec3(rotx.y, roty.y, normal.y), sampled_dir),
+                       dot(Vec3(rotx.z, roty.z, normal.z), sampled_dir));
+        const auto result = trace(Ray(p + (bias * direction), direction), depth + 1);
+
+        return {result.color * material.color * dot(normal, direction) / (Float)M_PI,
+                material.color, normal, t};
         break;
       }
 
@@ -113,19 +109,41 @@ trm::Renderer::PixelTraceResult trm::Renderer::trace(const Ray &r, const std::si
       {
         Vec3 reflected = normalize(reflect(r.d, normal));
         const auto result = trace(Ray(p + (bias * reflected), reflected), depth + 1);
+
         return {result.color, result.albedo, normal, t};
         break;
       }
 
     case REFRACTIVE:
       {
-        Vec3 refracted = refract(r.d, (r.material == id) ? -normal : normal,
-                                 r.material != 0 ? (mats[r.material - 1].ior / material.ior)
-                                                 : (1.0f / material.ior));
+        Float ior =
+            (r.material != 0) ? (mats[r.material - 1].ior / material.ior) : (1.0f / material.ior);
+        Vec3 refracted = normalize(refract(r.d, (r.material == id) ? -normal : normal, ior));
         const auto result = trace(
             Ray(p + (bias * refracted), refracted, r.material == 0 || r.material != id ? id : 0),
             depth + 1);
-        return {result.color * rr_weight * 1.15f, Vec3(1.0f), normal, t};
+        return {result.color, Vec3(1.0f), normal, t};
+      }
+
+    case FRESNEL:
+      {
+        Float cior = (r.material != 0) ? mats[r.material - 1].ior : 1.0f;
+        Float cos_theta = dot(-r.d, normal);
+        Float r0 = (cior - material.ior) / (cior + material.ior);
+        r0 = r0 * r0;
+        Float fresnel = r0 + (1.0f - r0) * pow(1.0f - cos_theta, 5.0f);
+
+        if (frand() < fresnel) {
+          Vec3 reflected = normalize(reflect(r.d, normal));
+          const auto result = trace(Ray(p + (bias * reflected), reflected, r.material), depth + 1);
+          return {result.color, Vec3(1.0f), normal, t};
+        } else {
+          Vec3 refracted = normalize(refract(r.d, normal, cior / material.ior));
+          const auto result = trace(
+              Ray(p + (bias * refracted), refracted, r.material == 0 || r.material != id ? id : 0),
+              depth + 1);
+          return {result.color, Vec3(1.0f), normal, t};
+        }
       }
   }
 

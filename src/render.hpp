@@ -1,10 +1,20 @@
 #ifndef INCLUDE_SRC_RENDER_HPP_
 #define INCLUDE_SRC_RENDER_HPP_
 
+#include <cstddef>
+#include <functional>
+
 #include "img.hpp"
 #include "types.hpp"
 
 namespace trm {
+  enum Shading { EMISSIVE, DIFFUSE, SPECULAR, REFRACTIVE, FRESNEL };
+  struct Material {
+    Shading shading;
+    Vec3 color;
+    Float emission, ior;
+  };
+
   struct Ray {
     Ray(const Vec3 &o, const Vec3 &d, const std::uint32_t mat = 0)
         : o(o), d(normalize(d)), material(mat) {}
@@ -33,6 +43,9 @@ namespace trm {
     Float russian_roulette = 0.1f;
 
     Camera camera = {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f}, M_PI / 2.0f};
+
+    std::function<void(std::size_t, std::size_t, std::size_t)> progress_callback =
+        [](std::size_t, std::size_t, std::size_t) {};
 
     double render(Image &img, std::uint32_t samples);
 
@@ -69,12 +82,13 @@ namespace trm {
     std::tuple<Float, std::uint32_t> ray_march(const Ray &r);
   };
 
+  void orthonormal_basis(const Vec3 &v1, Vec3 &v2, Vec3 &v3);
+  Vec3 hemisphere(const Float &u1, const Float &u2);
+
   Image render(std::string_view pattern, bool progressive = false);
   std::tuple<Vec3, Vec3, Vec3, Float> trace(const Ray &r, const std::size_t depth = 0);
   std::tuple<Float, std::uint32_t> ray_march(const Ray &r);
 
-  void ons(const Vec3 &v1, Vec3 &v2, Vec3 &v3);
-  Vec3 hemisphere(const Float &u1, const Float &u2);
 } // namespace trm
 
 #endif // INCLUDE_SRC_RENDER_HPP_

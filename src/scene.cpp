@@ -6,6 +6,8 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "render.hpp"
+
 using namespace trm;
 using namespace glm;
 
@@ -50,16 +52,16 @@ static std::function<Float(Vec3)> objects[] = {
     [](Vec3 p) { return length(Vec2(length(p.xz()) - 3.0f, p.y)) - 0.75f; }
 };
 
-trm::Mat trm::mats[] = {
-    {DIFFUSE, Vec3(1.0f, 1.0f, 1.0f), 0.0f, 0.0f, 0.0f},          // Floor
-    {EMISSIVE, Vec3(1.0f, 1.0f, 1.0f), 10.0f, 0.0f, 0.0f},        // Ceiling
-    {DIFFUSE, Vec3(0.12941, 0.58823, 0.95294), 0.0f, 0.0f, 0.0f}, // Right
-    {DIFFUSE, Vec3(0.95686, 0.26274, 0.21176), 0.0f, 0.0f, 0.0f}, // Left
-    {DIFFUSE, Vec3(0.0f, 0.0f, 1.0f), 0.0f, 0.0f, 0.0f},          // Front
-    {DIFFUSE, Vec3(0.29803, 0.68627, 0.31372), 0.0f, 0.0f, 0.0f}, // Back
-    {DIFFUSE, Vec3(1.0f, 1.0f, 1.0f), 0.0f, 0.0f, 0.0f},
-    {SPECULAR, Vec3(1.0f, 1.0f, 1.0f), 0.0f, 0.0f, 0.0f},
-    {REFRACTIVE, Vec3(1.0f, 1.0f, 1.0f), 0.0f, 0.0f, 1.5f},
+trm::Material trm::mats[] = {
+    {DIFFUSE,    Vec3(1.0f,    1.0f,    1.0f),    0.0f,  0.0f}, // Floor
+    {EMISSIVE,   Vec3(1.0f,    1.0f,    1.0f),    10.0f, 0.0f}, // Ceiling
+    {DIFFUSE,    Vec3(0.12941, 0.58823, 0.95294), 0.0f,  0.0f}, // Right
+    {DIFFUSE,    Vec3(0.95686, 0.26274, 0.21176), 0.0f,  0.0f}, // Left
+    {DIFFUSE,    Vec3(0.0f,    0.0f,    1.0f),    0.0f,  0.0f}, // Front
+    {DIFFUSE,    Vec3(0.29803, 0.68627, 0.31372), 0.0f,  0.0f}, // Back
+    {DIFFUSE,    Vec3(1.0f,    1.0f,    1.0f),    0.0f,  0.0f},
+    {SPECULAR,   Vec3(1.0f,    1.0f,    1.0f),    0.0f,  0.0f},
+    {FRESNEL, Vec3(1.0f,    1.0f,    1.0f),    0.0f,  1.5f},
 };
 // clang-format on
 
