@@ -12,6 +12,7 @@ option(TRM_ENABLE_PROFILING "Enable profiling" OFF)
 option(TRM_ENABLE_SANITIZERS "Enable sanitizers" OFF)
 
 option(TRM_BUILD_DOCS "Build documentation" OFF)
+option(TRM_BUILD_TESTS "Build unit tests" ON)
 
 # === Dependencies ===
 include(cmake/CPM.cmake)
@@ -25,10 +26,14 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # === Sanitizers ===
 
 # === Targets ===
-add_subdirectory("src")
+add_subdirectory(lib)
+
+if(TRM_BUILD_TESTS)
+  add_subdirectory("test")
+endif()
 
 if(TRM_BUILD_DOCS)
-  add_subdirectory("doc")
+  add_subdirectory("docs")
 endif()
 
 # === Packaging ===
@@ -41,7 +46,8 @@ set(CPACK_GENERATOR "TGZ;ZIP")
 include(CPack)
 
 # === Summary ===
-message(STATUS "==========  ${PROJECT_NAME} v${PROJECT_VERSION} (${PROJECT_VERSION_COMMIT})  ==========")
+message(
+  STATUS "==========  ${PROJECT_NAME} v${PROJECT_VERSION} (${PROJECT_VERSION_COMMIT})  ==========")
 message(STATUS "")
 message(STATUS "System:      ${CMAKE_SYSTEM_NAME}")
 message(STATUS "CMake:       ${CMAKE_VERSION}")
@@ -52,5 +58,6 @@ message(STATUS "")
 message(STATUS "Enable Profiling:    ${TRM_ENABLE_PROFILING}")
 message(STATUS "Enable Sanitizers:   ${TRM_ENABLE_SANITIZERS}")
 message(STATUS "")
+message(STATUS "Build Unit Tests:     ${TRM_BUILD_TESTS}")
 message(STATUS "Build Documentation:  ${TRM_BUILD_DOCS}")
 message(STATUS "============================================")
