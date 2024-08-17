@@ -61,7 +61,7 @@ double trm::Renderer::render(Image &img, std::uint32_t samples) {
     img.normal[i * 3 + 2] = (weight * img.normal[i * 3 + 2]) + pixel.normal.b;
     img.depth[i] = (weight * img.depth[i]) + pixel.depth;
 
-    if (i % 1000 == 0)
+    if (features & Features::PROGRESS_REPORT && i % 1000 == 0)
       progress_callback(1000, i, img.width * img.height);
   }
   img.samples += samples;

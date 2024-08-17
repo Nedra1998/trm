@@ -8,28 +8,10 @@
 #include "types.hpp"
 
 namespace trm {
-  enum Shading { EMISSIVE, DIFFUSE, SPECULAR, REFRACTIVE, FRESNEL };
-  struct Material {
-    Shading shading;
-    Vec3 color;
-    Float emission, ior;
-  };
-
-  struct Ray {
-    Ray(const Vec3 &o, const Vec3 &d, const std::uint32_t mat = 0)
-        : o(o), d(normalize(d)), material(mat) {}
-    Vec3 o, d;
-    std::uint32_t material;
-  };
-
-  struct Camera {
-    Vec3 pos, center, up;
-    Float fov;
-  };
-
   enum Features : std::uint32_t {
     NONE = 0,
-    RUSSIAN_ROULETTE = 1 << 0,
+    PROGRESS_REPORT = 1 << 0,
+    RUSSIAN_ROULETTE = 1 << 1,
   };
 
   class Renderer {
@@ -39,7 +21,7 @@ namespace trm {
     Float max_dist = 1e5f;
     Float bias = 10.0f * epsilon;
 
-    Features features = Features::NONE;
+    Features features = Features::PROGRESS_REPORT;
     Float russian_roulette = 0.1f;
 
     Camera camera = {{0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f}, M_PI / 2.0f};
@@ -84,11 +66,6 @@ namespace trm {
 
   void orthonormal_basis(const Vec3 &v1, Vec3 &v2, Vec3 &v3);
   Vec3 hemisphere(const Float &u1, const Float &u2);
-
-  Image render(std::string_view pattern, bool progressive = false);
-  std::tuple<Vec3, Vec3, Vec3, Float> trace(const Ray &r, const std::size_t depth = 0);
-  std::tuple<Float, std::uint32_t> ray_march(const Ray &r);
-
 } // namespace trm
 
 #endif // INCLUDE_SRC_RENDER_HPP_

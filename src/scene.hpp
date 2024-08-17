@@ -1,7 +1,6 @@
 #ifndef INCLUDE_SRC_SCENE_HPP_
 #define INCLUDE_SRC_SCENE_HPP_
 
-#include "render.hpp"
 #include "types.hpp"
 
 namespace trm {

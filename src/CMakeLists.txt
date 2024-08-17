@@ -26,6 +26,9 @@ CPMAddPackage(
   GITHUB_REPOSITORY g-truc/glm
   GIT_TAG 1.0.1 EXCLUDE_FROM_ALL TRUE SYSTEM TRUE)
 
+# === Options ===
+set(TRM_SCENE "BOX" CACHE STRING "Scene to render")
+
 # === Version Header ===
 string(TOUPPER ${PROJECT_NAME} PROJECT_NAME_UPPER)
 configure_file(version.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/version.hpp)
@@ -40,8 +43,9 @@ add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 add_executable(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
-target_compile_definitions(${PROJECT_NAME} PUBLIC -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
+target_compile_definitions(${PROJECT_NAME} PUBLIC -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE -DTRM_SCENE_NAME="${TRM_SCENE}" -DTRM_SCENE_${TRM_SCENE})
 target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog fmt::fmt TracyClient glm::glm
                                              argparse::argparse)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
                                                   ${CMAKE_CURRENT_BINARY_DIR})
+

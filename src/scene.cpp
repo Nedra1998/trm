@@ -6,12 +6,11 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "render.hpp"
-
 using namespace trm;
 using namespace glm;
 
 // clang-format off
+#ifdef TRM_SCENE_BOX
 static trm::Mat4 transforms[] = {
     Mat4(1.0f),
     Mat4(1.0f),
@@ -63,6 +62,7 @@ trm::Material trm::mats[] = {
     {SPECULAR,   Vec3(1.0f,    1.0f,    1.0f),    0.0f,  0.0f},
     {FRESNEL, Vec3(1.0f,    1.0f,    1.0f),    0.0f,  1.5f},
 };
+#endif
 // clang-format on
 
 std::tuple<trm::Float, std::uint32_t> trm::sdf(Vec3 p) {
@@ -70,6 +70,7 @@ std::tuple<trm::Float, std::uint32_t> trm::sdf(Vec3 p) {
   std::uint32_t obj = 0;
 
   for (std::size_t i = 0; i < sizeof(objects) / sizeof(objects[0]); ++i) {
+    // for (std::size_t i = 0; i < objects.size(); ++i) {
     Float obj_dist = abs(objects[i](inverses[i] * Vec4(p, 1.0f)));
     if (obj_dist < dist) {
       dist = obj_dist;

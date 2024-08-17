@@ -6,6 +6,7 @@
 
 #include "log.hpp"
 #include "stb_image_write.h"
+#include "version.hpp"
 
 template <> struct fmt::formatter<trm::Buffer> : fmt::formatter<string_view> {
   auto format(trm::Buffer buf, format_context &ctx) const -> format_context::iterator {
@@ -63,9 +64,10 @@ bool trm::Image::write(std::string_view path, Buffer buffer) const {
 bool trm::Image::write_u8(std::string_view path, std::string_view ext, Buffer buffer) const {
   ZoneScoped;
 
-  std::filesystem::path file(fmt::format(fmt::runtime(path), fmt::arg("buffer", buffer),
-                                         fmt::arg("samples", samples), fmt::arg("width", width),
-                                         fmt::arg("height", height)));
+  std::filesystem::path file(
+      fmt::format(fmt::runtime(path), fmt::arg("buffer", buffer), fmt::arg("samples", samples),
+                  fmt::arg("width", width), fmt::arg("height", height),
+                  fmt::arg("commit", TRM_VERSION_COMMIT), fmt::arg("name", name)));
 
   LOG_INFO("Writing {} buffer to {} file {}", buffer, ext, file);
 
@@ -229,9 +231,10 @@ bool trm::Image::write_f32(std::string_view path, std::string_view ext, Buffer b
       return false;
   }
 
-  std::filesystem::path file(fmt::format(fmt::runtime(path), fmt::arg("buffer", buffer),
-                                         fmt::arg("samples", samples), fmt::arg("width", width),
-                                         fmt::arg("height", height)));
+  std::filesystem::path file(
+      fmt::format(fmt::runtime(path), fmt::arg("buffer", buffer), fmt::arg("samples", samples),
+                  fmt::arg("width", width), fmt::arg("height", height),
+                  fmt::arg("commit", TRM_VERSION_COMMIT), fmt::arg("name", name)));
 
   if (file.has_parent_path() && !std::filesystem::is_directory(file.parent_path())) {
     LOG_DEBUG("Creating output directory {}", file.parent_path());

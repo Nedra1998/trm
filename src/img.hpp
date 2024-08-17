@@ -25,11 +25,13 @@ namespace trm {
 
   class Image {
   public:
-    Image(std::size_t width, std::size_t height, std::size_t samples = 0)
-        : width(width), height(height), samples(samples), color(width * height * 3),
+    Image(std::size_t width, std::size_t height, std::string_view name = std::string_view(),
+          std::size_t samples = 0)
+        : width(width), height(height), samples(samples), name(name), color(width * height * 3),
           albedo(width * height * 3), normal(width * height * 3), depth(width * height) {}
 
     std::size_t width, height, samples;
+    std::string_view name;
     std::vector<Float> color;
     std::vector<Float> albedo;
     std::vector<Float> normal;
