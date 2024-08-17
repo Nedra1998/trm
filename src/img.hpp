@@ -15,6 +15,11 @@ namespace trm {
     ALL = 0b1111
   };
 
+  struct ImageError {
+    float error = 0.0f, absolute = 0.0f, squared = 0.0f, relative_absolute = 0.0f,
+          relative_squared = 0.0f;
+  };
+
   inline Buffer operator~(Buffer a) { return (Buffer) ~(int)a; }
   inline Buffer operator|(Buffer a, Buffer b) { return (Buffer)((int)a | (int)b); }
   inline Buffer operator&(Buffer a, Buffer b) { return (Buffer)((int)a & (int)b); }
@@ -37,7 +42,12 @@ namespace trm {
     std::vector<Float> normal;
     std::vector<Float> depth;
 
+    std::string path(std::string_view path, Buffer buffer) const;
     bool write(std::string_view path, Buffer buffer) const;
+    bool read(std::string_view path, Buffer buffer);
+
+    ImageError error(const Image &other) const;
+    bool normalize(Buffer buffer);
 
   private:
     bool write_u8(std::string_view path, std::string_view ext, Buffer buffer) const;

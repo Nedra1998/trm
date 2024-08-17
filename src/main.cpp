@@ -1,7 +1,9 @@
 #include <chrono>
+#include <filesystem>
 
 #include <argparse/argparse.hpp>
 #include <common/TracyVersion.hpp>
+#include <fmt/base.h>
 #include <spdlog/cfg/env.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/stdout_sinks.h>
@@ -23,6 +25,13 @@ void operator delete(void *ptr) noexcept {
   TracyFree(ptr);
   free(ptr);
 }
+
+struct SnapshotDetails {
+  std::filesystem::path file;
+  std::chrono::milliseconds elapsed;
+  std::size_t samples;
+  trm::ImageError error;
+};
 
 using namespace trm;
 
@@ -47,6 +56,7 @@ int main(int argc, char *argv[]) {
   spdlog::cfg::load_env_levels();
 
   argparse::ArgumentParser program("trm", TRM_VERSION);
+  program.add_argument("-e", "--error").help("Compute error of snapshots to final image").flag();
   program.add_argument("-r", "--resolution")
       .help("Resolution of the output impage")
       .nargs(2)
@@ -86,6 +96,7 @@ int main(int argc, char *argv[]) {
   const auto resolution = program.get<std::vector<std::uint32_t>>("--resolution");
   const auto output = program.get<std::string>("--output");
   const auto scene = program.get<std::string>("--scene");
+  const auto error = program.get<bool>("--error");
 
   trm::Image img(resolution[0], resolution[1], scene);
   trm::Renderer renderer;
@@ -103,7 +114,7 @@ int main(int argc, char *argv[]) {
   renderer.progress_callback = [&](std::size_t chunk, std::size_t current, std::size_t total) {
     const auto now = std::chrono::high_resolution_clock::now();
     cumulative += chunk;
-    float progress = static_cast<float>(cumulative) / static_cast<float>(total);
+    float progress = static_cast<float>(cumulative) / static_cast<float>(total_pixels);
     float elapsed = std::chrono::duration<double>(now - start).count();
     LOG_INFO("Rendering progress report percent={:06.2f}% elapsed={:.2f}s remaining={:.2f}s",
              progress * 100, elapsed, elapsed / progress - elapsed);
@@ -112,11 +123,50 @@ int main(int argc, char *argv[]) {
   LOG_INFO("Rendering Image {}x{} @ {} in {} batches", img.width, img.height, samples,
            (samples / batch));
 
+  std::vector<SnapshotDetails> snapshots;
   for (std::uint32_t cumulative_samples = 0; cumulative_samples < samples;
        cumulative_samples += batch) {
     renderer.render(img, std::min(batch, samples - cumulative_samples));
-    img.write(output, trm::Buffer::ALL);
+    img.normalize(trm::Buffer::ALL);
+    if (!img.write(output, trm::Buffer::ALL)) {
+      LOG_ERROR("Failed to write image, abording further rendering", output);
+      break;
+    }
+    snapshots.push_back(
+        SnapshotDetails{.file = img.path(output, trm::Buffer::COLOR),
+                        .elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::high_resolution_clock::now() - start),
+                        .samples = cumulative_samples + batch,
+                        .error = trm::ImageError{}});
     FrameMark;
+  }
+
+  if (error && snapshots.size() > 1) {
+    LOG_INFO("Computing error for each snapshot");
+    Image prev(resolution[0], resolution[1]);
+    for (std::size_t i = 0; i < snapshots.size() - 1; i++) {
+      prev.read(snapshots[i].file.string(), Buffer::COLOR);
+      snapshots[i].error = img.error(prev);
+      LOG_INFO("Snapshot {} samples={} elapsed={}ms error={:.6f} {:.6f} {:.6f} {:.6f} {:.6f}",
+               snapshots[i].file.string(), snapshots[i].samples, snapshots[i].elapsed.count(),
+               snapshots[i].error.error, snapshots[i].error.absolute, snapshots[i].error.squared,
+               snapshots[i].error.relative_absolute, snapshots[i].error.relative_squared);
+    }
+  }
+
+  if (!error)
+    fmt::print("File,Samples,ElapsedMs\n");
+  else
+    fmt::print("File,Samples,ElapsedMs,Error,AbsolutError,SquaredError,RelativeAbsoluteError,"
+               "RelativeSquaredError\n");
+  for (const auto &snapshot : snapshots) {
+    if (!error)
+      fmt::print("{},{},{}\n", snapshot.file.string(), snapshot.samples, snapshot.elapsed.count());
+    else
+      fmt::print("{},{},{},{},{},{},{},{}\n", snapshot.file.string(), snapshot.samples,
+                 snapshot.elapsed.count(), snapshot.error.error, snapshot.error.absolute,
+                 snapshot.error.squared, snapshot.error.relative_absolute,
+                 snapshot.error.relative_squared);
   }
 
   return 0;
