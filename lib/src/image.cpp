@@ -1,0 +1,130 @@
+#include "image.hpp"
+
+#include <filesystem>
+
+#include "log.hpp"
+
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+
+#include "md5.hpp"
+#include "stb_image.h"
+#include "stb_image_write.h"
+
+std::optional<trm::Image> trm::Image::read(std::string_view path) {
+  PROFILE_ZONE();
+
+  std::filesystem::path file = path;
+  if (!std::filesystem::exists(file)) {
+    LOG_ERROR("File does not exist: {}", path);
+    return std::nullopt;
+  }
+
+  int width, height, channels;
+  float *data = nullptr;
+  {
+    PROFILE_ZONEN("stbi_loadf");
+    data = stbi_loadf(path.data(), &width, &height, &channels, 0);
+  }
+  if (data == nullptr) {
+    LOG_ERROR("Failed to read image: {}", path);
+    return std::nullopt;
+  }
+
+  Image image(width, height, channels);
+  std::copy(data, data + width * height * channels, image._data.begin());
+
+  stbi_image_free(data);
+  return image;
+}
+
+bool trm::Image::write(std::string_view path) const {
+  PROFILE_ZONE();
+
+  std::filesystem::path file = path;
+  if (file.has_parent_path() && !std::filesystem::is_directory(file.parent_path())) {
+    LOG_DEBUG("Creating directory for file: {}", file.parent_path());
+    std::error_code err;
+    if (!std::filesystem::create_directories(file.parent_path(), err)) {
+      LOG_ERROR("Failed to create directory for file: {}", err.message());
+      return false;
+    }
+  }
+
+  std::string_view extension = path.substr(path.find_last_of('.') + 1);
+  std::vector<Float> data = normalized();
+
+  stbi_flip_vertically_on_write(true);
+  if (extension == "hdr") {
+    PROFILE_ZONEN("stbi_write_hdr");
+    return stbi_write_hdr(file.c_str(), _size.x, _size.y, _size.z, data.data()) != 0;
+  } else {
+    std::vector<std::uint8_t> pixels(data.size());
+    std::transform(data.begin(), data.end(), pixels.begin(),
+                   [](Float value) { return static_cast<std::uint8_t>(value * 255.0f); });
+
+    if (extension == "png") {
+      PROFILE_ZONEN("stbi_write_png");
+      return stbi_write_png(file.c_str(), _size.x, _size.y, _size.z, pixels.data(),
+                            _size.x * _size.z) != 0;
+    } else if (extension == "jpg" || extension == "jpeg") {
+      PROFILE_ZONEN("stbi_write_jpg");
+      return stbi_write_jpg(file.c_str(), _size.x, _size.y, _size.z, pixels.data(), 100) != 0;
+    } else if (extension == "bmp") {
+      PROFILE_ZONEN("stbi_write_bmp");
+      return stbi_write_bmp(file.c_str(), _size.x, _size.y, _size.z, pixels.data()) != 0;
+    } else if (extension == "tga") {
+      PROFILE_ZONEN("stbi_write_tga");
+      return stbi_write_tga(file.c_str(), _size.x, _size.y, _size.z, pixels.data()) != 0;
+    } else {
+      LOG_ERROR(
+          "Unsupported image format: {}, supported formats are: hdr, png, jpg, jpeg, bmp, tga",
+          extension);
+      return false;
+    }
+  }
+
+  return false;
+}
+
+std::vector<trm::Float> trm::Image::normalized() const {
+  PROFILE_ZONE();
+
+  std::vector<Float> normalized_data(_data.size());
+
+  switch (buffer) {
+    case Buffer::COLOR:
+      std::transform(_data.cbegin(), _data.cend(), normalized_data.begin(),
+                     [](Float value) { return std::clamp(value, 0.0f, 1.0f); });
+      break;
+    case Buffer::ALBEDO:
+      std::transform(_data.cbegin(), _data.cend(), normalized_data.begin(),
+                     [](Float value) { return std::clamp(value, 0.0f, 1.0f); });
+      break;
+    case Buffer::NORMAL:
+      std::transform(_data.cbegin(), _data.cend(), normalized_data.begin(),
+                     [](Float value) { return (std::clamp(value, -1.0f, 1.0f) + 1.0f) / 2.0f; });
+      break;
+    case Buffer::DEPTH:
+      {
+        Float min = *std::min_element(_data.cbegin(), _data.cend());
+        Float max = *std::max_element(_data.cbegin(), _data.cend()) * 0.95f;
+        std::transform(_data.cbegin(), _data.cend(), normalized_data.begin(),
+                       [&](Float value) { return 1.0f - ((value - min) / (max - min)); });
+        break;
+      }
+    default:
+      std::copy(_data.cbegin(), _data.cend(), normalized_data.begin());
+      break;
+  }
+
+  return normalized_data;
+}
+
+std::string trm::Image::md5() const {
+  PROFILE_ZONE();
+
+  MD5 md5;
+  md5(_data.data(), _data.size() * sizeof(Float));
+  return md5.getHash();
+}
