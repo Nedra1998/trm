@@ -24,12 +24,25 @@ namespace trm {
    * will influence how the image is normalized prior to writing to disk.
    */
   enum struct Buffer : std::uint8_t {
-    NONE,   ///< No specific buffer
-    COLOR,  ///< Color buffer (RGB)
-    ALBEDO, ///< Albedo buffer (RGB)
-    NORMAL, ///< Normal buffer (XYZ)
-    DEPTH,  ///< Depth buffer (Z)
+    // clang-format off
+    NONE   = 0b0000, ///< No specific buffer
+    COLOR  = 0b0001, ///< Color buffer (RGB)
+    ALBEDO = 0b0010, ///< Albedo buffer (RGB)
+    NORMAL = 0b0100, ///< Normal buffer (XYZ)
+    DEPTH  = 0b1000, ///< Depth buffer (Z)
+    ALL    = 0b1111, ///< All buffers
+    // clang-format on
   };
+
+  // clang-format off
+  inline Buffer operator~(Buffer a) { return (Buffer) ~(std::uint8_t)a; }
+  inline Buffer operator|(Buffer a, Buffer b) { return (Buffer)((std::uint8_t)a | (std::uint8_t)b); }
+  inline Buffer operator&(Buffer a, Buffer b) { return (Buffer)((std::uint8_t)a & (std::uint8_t)b); }
+  inline Buffer operator^(Buffer a, Buffer b) { return (Buffer)((std::uint8_t)a ^ (std::uint8_t)b); }
+  inline Buffer &operator|=(Buffer &a, Buffer b) { return (Buffer &)((std::uint8_t &)a |= (std::uint8_t)b); }
+  inline Buffer &operator&=(Buffer &a, Buffer b) { return (Buffer &)((std::uint8_t &)a &= (std::uint8_t)b); }
+  inline Buffer &operator^=(Buffer &a, Buffer b) { return (Buffer &)((std::uint8_t &)a ^= (std::uint8_t)b); }
+  // clang-format on
 
   /**
    * @class Image
@@ -49,23 +62,8 @@ namespace trm {
      * @param depth Number of channels in the image.
      */
     Image(std::uint32_t width, std::uint32_t height, std::uint32_t depth = 3)
-        : _size(width, height, depth), _samples(0), buffer(Buffer::NONE),
-          _data(width * height * depth) {}
-    /**
-     * @brief Construct a new Image object with the given size and depth
-     *
-     * @param size Resolution of the image in pixels.
-     * @param depth Number of channels in the image.
-     */
-    Image(glm::uvec2 size, std::uint32_t depth = 3)
-        : _size(size, depth), _samples(0), buffer(Buffer::NONE), _data(size.x * size.y * depth) {}
-    /**
-     * @brief Construct a new Image object with the given size
-     *
-     * @param size Resolution and depth of the image in pixels / channels.
-     */
-    Image(glm::uvec3 size)
-        : _size(size), _samples(0), buffer(Buffer::NONE), _data(size.x * size.y * size.z) {}
+        : width(width), height(height), depth(depth), buffer(Buffer::NONE),
+          data(width * height * depth) {}
     /**
      * @brief Construct a new Image object with the given width, height, and buffer type
      *
@@ -75,18 +73,8 @@ namespace trm {
      * otherwise.
      */
     Image(std::uint32_t width, std::uint32_t height, Buffer buffer)
-        : _size(width, height, buffer == Buffer::DEPTH ? 1 : 3), _samples(0), buffer(buffer),
-          _data(width * height * (buffer == Buffer::DEPTH ? 1 : 3)) {}
-    /**
-     * @brief Construct a new Image object with the given size and buffer type
-     *
-     * @param size Resolution of the image in pixels.
-     * @param buffer The buffer type for the image, implies a depth of 1 for `Buffer::DEPTH` and 3
-     * otherwise.
-     */
-    Image(glm::uvec2 size, Buffer buffer)
-        : _size(size, (buffer == Buffer::DEPTH ? 1 : 3)), _samples(0), buffer(buffer),
-          _data(size.x * size.y * (buffer == Buffer::DEPTH ? 1 : 3)) {}
+        : width(width), height(height), depth(buffer == Buffer::DEPTH ? 1 : 3), buffer(buffer),
+          data(width * height * (buffer == Buffer::DEPTH ? 1 : 3)) {}
 
     /**
      * @brief Read an image from disk
@@ -146,7 +134,7 @@ namespace trm {
      *
      * @see normalized
      */
-    inline void normalize() { _data = normalized(); }
+    inline void normalize() { data = normalized(); }
 
     /**
      * @brief Compute the MD5 hash of the image data.
@@ -155,16 +143,46 @@ namespace trm {
      */
     std::string md5() const;
 
-    inline std::vector<Float> &data() { return _data; }
-    inline const std::vector<Float> &data() const { return _data; }
-    inline Float &operator[](std::size_t index) { return _data[index]; }
+    inline void set(std::size_t i, const Float &value) {
+      if (width == 0 || height == 0)
+        return;
+      data[i * depth] = value;
+    }
+    inline void set(std::size_t i, const Vec3 &value) {
+      if (width == 0 || height == 0)
+        return;
+      data[i * depth + 0] = value.r;
+      data[i * depth + 1] = value.g;
+      data[i * depth + 2] = value.b;
+    }
 
+    inline Float &operator[](std::size_t index) { return data[index]; }
+
+    inline Image &operator*=(const Float scalar) {
+      for (auto &d : data) {
+        d *= scalar;
+      }
+      return *this;
+    }
+
+    std::uint32_t width, height, depth;
     Buffer buffer;
+    std::vector<Float> data;
+  };
 
-  private:
-    glm::uvec3 _size;
-    std::uint32_t _samples;
-    std::vector<Float> _data;
+  struct ImageSet {
+    ImageSet(std::uint32_t width, std::uint32_t height, Buffer buffers);
+
+    inline ImageSet *operator*=(const Float scalar) {
+      color *= scalar;
+      albedo *= scalar;
+      normal *= scalar;
+      depth *= scalar;
+      return this;
+    }
+
+    std::uint32_t width, height, samples = 0;
+    Image color, albedo, normal, depth;
   };
 } // namespace trm
 

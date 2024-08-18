@@ -32,7 +32,7 @@ std::optional<trm::Image> trm::Image::read(std::string_view path) {
   }
 
   Image image(width, height, channels);
-  std::copy(data, data + width * height * channels, image._data.begin());
+  std::copy(data, data + width * height * channels, image.data.begin());
 
   stbi_image_free(data);
   return image;
@@ -57,7 +57,7 @@ bool trm::Image::write(std::string_view path) const {
   stbi_flip_vertically_on_write(true);
   if (extension == "hdr") {
     PROFILE_ZONEN("stbi_write_hdr");
-    return stbi_write_hdr(file.c_str(), _size.x, _size.y, _size.z, data.data()) != 0;
+    return stbi_write_hdr(file.c_str(), width, height, depth, data.data()) != 0;
   } else {
     std::vector<std::uint8_t> pixels(data.size());
     std::transform(data.begin(), data.end(), pixels.begin(),
@@ -65,17 +65,16 @@ bool trm::Image::write(std::string_view path) const {
 
     if (extension == "png") {
       PROFILE_ZONEN("stbi_write_png");
-      return stbi_write_png(file.c_str(), _size.x, _size.y, _size.z, pixels.data(),
-                            _size.x * _size.z) != 0;
+      return stbi_write_png(file.c_str(), width, height, depth, pixels.data(), width * depth) != 0;
     } else if (extension == "jpg" || extension == "jpeg") {
       PROFILE_ZONEN("stbi_write_jpg");
-      return stbi_write_jpg(file.c_str(), _size.x, _size.y, _size.z, pixels.data(), 100) != 0;
+      return stbi_write_jpg(file.c_str(), width, height, depth, pixels.data(), 100) != 0;
     } else if (extension == "bmp") {
       PROFILE_ZONEN("stbi_write_bmp");
-      return stbi_write_bmp(file.c_str(), _size.x, _size.y, _size.z, pixels.data()) != 0;
+      return stbi_write_bmp(file.c_str(), width, height, depth, pixels.data()) != 0;
     } else if (extension == "tga") {
       PROFILE_ZONEN("stbi_write_tga");
-      return stbi_write_tga(file.c_str(), _size.x, _size.y, _size.z, pixels.data()) != 0;
+      return stbi_write_tga(file.c_str(), width, height, depth, pixels.data()) != 0;
     } else {
       LOG_ERROR(
           "Unsupported image format: {}, supported formats are: hdr, png, jpg, jpeg, bmp, tga",
@@ -90,31 +89,31 @@ bool trm::Image::write(std::string_view path) const {
 std::vector<trm::Float> trm::Image::normalized() const {
   PROFILE_ZONE();
 
-  std::vector<Float> normalized_data(_data.size());
+  std::vector<Float> normalized_data(data.size());
 
   switch (buffer) {
     case Buffer::COLOR:
-      std::transform(_data.cbegin(), _data.cend(), normalized_data.begin(),
+      std::transform(data.cbegin(), data.cend(), normalized_data.begin(),
                      [](Float value) { return std::clamp(value, 0.0f, 1.0f); });
       break;
     case Buffer::ALBEDO:
-      std::transform(_data.cbegin(), _data.cend(), normalized_data.begin(),
+      std::transform(data.cbegin(), data.cend(), normalized_data.begin(),
                      [](Float value) { return std::clamp(value, 0.0f, 1.0f); });
       break;
     case Buffer::NORMAL:
-      std::transform(_data.cbegin(), _data.cend(), normalized_data.begin(),
+      std::transform(data.cbegin(), data.cend(), normalized_data.begin(),
                      [](Float value) { return (std::clamp(value, -1.0f, 1.0f) + 1.0f) / 2.0f; });
       break;
     case Buffer::DEPTH:
       {
-        Float min = *std::min_element(_data.cbegin(), _data.cend());
-        Float max = *std::max_element(_data.cbegin(), _data.cend()) * 0.95f;
-        std::transform(_data.cbegin(), _data.cend(), normalized_data.begin(),
+        Float min = *std::min_element(data.cbegin(), data.cend());
+        Float max = *std::max_element(data.cbegin(), data.cend()) * 0.95f;
+        std::transform(data.cbegin(), data.cend(), normalized_data.begin(),
                        [&](Float value) { return 1.0f - ((value - min) / (max - min)); });
         break;
       }
     default:
-      std::copy(_data.cbegin(), _data.cend(), normalized_data.begin());
+      std::copy(data.cbegin(), data.cend(), normalized_data.begin());
       break;
   }
 
@@ -125,6 +124,17 @@ std::string trm::Image::md5() const {
   PROFILE_ZONE();
 
   MD5 md5;
-  md5(_data.data(), _data.size() * sizeof(Float));
+  md5(data.data(), data.size() * sizeof(Float));
   return md5.getHash();
 }
+
+trm::ImageSet::ImageSet(std::uint32_t width, std::uint32_t height, Buffer buffers)
+    : width(width), height(height), samples(0),
+      color(((buffers & Buffer::COLOR) == Buffer::COLOR) ? width : 0,
+            ((buffers & Buffer::COLOR) == Buffer::COLOR) ? height : 0, Buffer::COLOR),
+      albedo(((buffers & Buffer::ALBEDO) == Buffer::ALBEDO) ? width : 0,
+             ((buffers & Buffer::ALBEDO) == Buffer::ALBEDO) ? height : 0, Buffer::ALBEDO),
+      normal(((buffers & Buffer::NORMAL) == Buffer::NORMAL) ? width : 0,
+             ((buffers & Buffer::NORMAL) == Buffer::NORMAL) ? height : 0, Buffer::NORMAL),
+      depth(((buffers & Buffer::DEPTH) == Buffer::DEPTH) ? width : 0,
+            ((buffers & Buffer::DEPTH) == Buffer::DEPTH) ? height : 0, Buffer::DEPTH) {}

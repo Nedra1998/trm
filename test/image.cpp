@@ -37,24 +37,24 @@ TEST_CASE("Image Normalization", "[image]") {
   SECTION("Color Buffer") {
     image.buffer = trm::Buffer::COLOR;
     auto normalized_data = image.normalized();
-    REQUIRE(normalized_data.size() == image.data().size());
+    REQUIRE(normalized_data.size() == image.data.size());
   }
 
   SECTION("Albedo Buffer") {
     image.buffer = trm::Buffer::ALBEDO;
     auto normalized_data = image.normalized();
-    REQUIRE(normalized_data.size() == image.data().size());
+    REQUIRE(normalized_data.size() == image.data.size());
   }
 
   SECTION("Normal Buffer") {
     image.buffer = trm::Buffer::NORMAL;
     auto normalized_data = image.normalized();
-    REQUIRE(normalized_data.size() == image.data().size());
+    REQUIRE(normalized_data.size() == image.data.size());
   }
 
   SECTION("Depth Buffer") {
     image.buffer = trm::Buffer::DEPTH;
     auto normalized_data = image.normalized();
-    REQUIRE(normalized_data.size() == image.data().size());
+    REQUIRE(normalized_data.size() == image.data.size());
   }
 }
