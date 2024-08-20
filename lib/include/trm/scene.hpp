@@ -13,7 +13,6 @@ namespace trm {
     Vec3 normal(const Vec3 &p, std::uint32_t obj) const;
     inline Material materials(std::uint32_t obj) const { return materials_[obj - 1]; }
 
-  private:
     std::vector<Mat4> transforms_;
     std::vector<Mat4> inv_transforms_;
     std::vector<Material> materials_;

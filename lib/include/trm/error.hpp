@@ -4,6 +4,9 @@
  *
  * This file provides an interface for computing the error between images. There are a number of
  * different metrics that are supported.
+ *
+ * @todo Add support for \f$\Delta E\f$ error metric, which provides a perceptual difference between
+ * images.
  */
 
 #ifndef INCLUDE_TRM_ERROR_HPP_
@@ -48,7 +51,8 @@ namespace trm {
    * computing the error will have their values set, the others will be `0.0f`.
    */
   struct Error {
-    float error = 0.0f, absolute = 0.0f, squared = 0.0f, relative_absolute = 0.0f, relative = 0.0f;
+    float error = 0.0f, absolute = 0.0f, squared = 0.0f, relative_absolute = 0.0f,
+          relative_squared = 0.0f;
   };
 
   /**
@@ -63,8 +67,7 @@ namespace trm {
    * @param metric The error metric(s) to compute.
    * @return The error between the two images.
    */
-  ErrorMetric compare(const Image &reference, const Image &test,
-                      ErrorMetric metric = ErrorMetric::ALL);
+  Error compare(const Image &reference, const Image &test, ErrorMetric metric = ErrorMetric::ALL);
 
   /**
    * @brief Generate an image showing the difference between two images.

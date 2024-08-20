@@ -26,7 +26,71 @@ trm::Vec3 sample_hemisphere(const trm::Float &u1, const trm::Float &u2) {
   return trm::Vec3(cos(phi) * r, sin(phi) * r, u1);
 }
 
-std::chrono::milliseconds trm::Renderer::render(ImageSet &img, std::uint32_t samples) {
+std::vector<trm::Renderer::RenderStats> trm::Renderer::render(std::string_view filename,
+                                                              ImageSet &img, std::uint32_t samples,
+                                                              std::uint32_t batch_size,
+                                                              bool compute_error) {
+  target_samples = samples;
+  std::chrono::milliseconds total_time = std::chrono::milliseconds(0);
+  std::vector<RenderStats> stats;
+  for (std::uint32_t s = 0; s < samples; s += batch_size) {
+    std::uint32_t batch = std::min(batch_size, samples - s);
+    const auto duration = render(img, batch);
+    total_time += duration;
+
+    img.write(filename, Buffer::ALL);
+    stats.push_back(RenderStats{
+        .filename = img.fmt(filename, Buffer::COLOR),
+        .total_time = total_time,
+        .batch_time = duration,
+        .samples = s + batch,
+        .batch_size = batch,
+        .error = Error(),
+    });
+
+    if ((cfg.features & Feature::PROGRESS_REPORT) == Feature::PROGRESS_REPORT) {
+      const float percent = static_cast<float>(s + batch) / static_cast<float>(samples);
+      const std::uint32_t elapsed_hours =
+          std::chrono::duration_cast<std::chrono::hours>(total_time).count();
+      const std::uint32_t elapsed_minutes =
+          std::chrono::duration_cast<std::chrono::minutes>(total_time).count() % 60;
+      const std::uint32_t elapsed_seconds =
+          std::chrono::duration_cast<std::chrono::seconds>(total_time).count() % 60;
+      const auto eta = (total_time / percent) - total_time;
+      const std::uint32_t eta_hours = std::chrono::duration_cast<std::chrono::hours>(eta).count();
+      const std::uint32_t eta_minutes =
+          std::chrono::duration_cast<std::chrono::minutes>(eta).count() % 60;
+      const std::uint32_t eta_seconds =
+          std::chrono::duration_cast<std::chrono::seconds>(eta).count() % 60;
+      LOG_INFO("Rendered {:3d}/{:3d} samples in {:6d}ms ({:6.2f}%) "
+               "[{:02d}:{:02d}:{:02d}<{:02d}:{:02d}:{:02d}]",
+               s + batch, samples, duration.count(), 100.0f * percent, elapsed_hours,
+               elapsed_minutes, elapsed_seconds, eta_hours, eta_minutes, eta_seconds);
+    }
+  }
+
+  if (compute_error) {
+    const std::optional<Image> reference_opt = Image::read(stats.back().filename);
+    if (!reference_opt.has_value()) {
+      LOG_ERROR("Failed to read reference image: {}", stats.back().filename);
+      return stats;
+    }
+    const Image &reference = reference_opt.value();
+    for (RenderStats &stat : stats) {
+      const std::optional<Image> test_opt = Image::read(stat.filename);
+      if (!test_opt.has_value()) {
+        LOG_ERROR("Failed to read test image: {}", stat.filename);
+        continue;
+      }
+      const Image &test = test_opt.value();
+      stat.error = compare(reference, test, ErrorMetric::ALL);
+    }
+  }
+
+  return stats;
+}
+
+std::chrono::milliseconds trm::Renderer::render(ImageSet &img, std::uint32_t samples) const {
   PROFILE_ZONE();
   const auto start = std::chrono::high_resolution_clock::now();
 
@@ -39,6 +103,7 @@ std::chrono::milliseconds trm::Renderer::render(ImageSet &img, std::uint32_t sam
   if (img.samples != 0) {
     img *= image_weight;
   }
+  std::uint16_t progress = 0;
 
   for (std::size_t i = 0; i < img.width * img.height; ++i) {
     std::size_t x = i % img.width;
@@ -55,6 +120,35 @@ std::chrono::milliseconds trm::Renderer::render(ImageSet &img, std::uint32_t sam
     img.albedo.set(i, pixel.albedo);
     img.normal.set(i, pixel.normal);
     img.depth.set(i, pixel.depth);
+
+    if ((cfg.features & Feature::PROGRESS_REPORT) == Feature::PROGRESS_REPORT && (i % 1000 == 0) &&
+        (100 * i) / (img.width * img.height) != progress) {
+      const float percent = static_cast<float>(i) / static_cast<float>(img.width * img.height);
+      float tpercent = percent;
+      if (target_samples != 0) {
+        tpercent /= (static_cast<float>(target_samples) / static_cast<float>(samples));
+        tpercent += (static_cast<float>(img.samples) / static_cast<float>(target_samples));
+      }
+      const auto elapsed = std::chrono::high_resolution_clock::now() - start;
+      const std::uint32_t elapsed_hours =
+          std::chrono::duration_cast<std::chrono::hours>(elapsed).count();
+      const std::uint32_t elapsed_minutes =
+          std::chrono::duration_cast<std::chrono::minutes>(elapsed).count() % 60;
+      const std::uint32_t elapsed_seconds =
+          std::chrono::duration_cast<std::chrono::seconds>(elapsed).count() % 60;
+      const auto eta = (elapsed / percent) - elapsed;
+      const std::uint32_t eta_hours = std::chrono::duration_cast<std::chrono::hours>(eta).count();
+      const std::uint32_t eta_minutes =
+          std::chrono::duration_cast<std::chrono::minutes>(eta).count() % 60;
+      const std::uint32_t eta_seconds =
+          std::chrono::duration_cast<std::chrono::seconds>(eta).count() % 60;
+
+      progress = (100 * i) / (img.width * img.height);
+
+      LOG_DEBUG("Rendering {:6.2f}% [{:02d}:{:02d}:{:02d}<{:02d}:{:02d}:{:02d}]", 100.0f * tpercent,
+                elapsed_hours, elapsed_minutes, elapsed_seconds, eta_hours, eta_minutes,
+                eta_seconds);
+    }
   }
 
   img.samples += samples;
@@ -63,7 +157,7 @@ std::chrono::milliseconds trm::Renderer::render(ImageSet &img, std::uint32_t sam
       std::chrono::high_resolution_clock::now() - start);
 }
 
-trm::Renderer::Pixel trm::Renderer::trace(const Ray &r, const std::size_t depth) {
+trm::Renderer::Pixel trm::Renderer::trace(const Ray &r, const std::size_t depth) const {
   PROFILE_ZONE();
 
   if (depth >= cfg.max_depth) {
@@ -144,7 +238,7 @@ trm::Renderer::Pixel trm::Renderer::trace(const Ray &r, const std::size_t depth)
   return Pixel();
 }
 
-std::tuple<trm::Float, std::uint32_t> trm::Renderer::ray_march(const Ray &r) {
+std::tuple<trm::Float, std::uint32_t> trm::Renderer::ray_march(const Ray &r) const {
   ZoneScoped;
   Float delta = 0.0;
   std::uint32_t obj = 0;

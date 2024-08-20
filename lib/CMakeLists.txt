@@ -15,24 +15,17 @@ CPMAddPackage(
   GITHUB_REPOSITORY wolfpld/tracy
   GIT_TAG v0.11.0
   OPTIONS "TRACY_ENABLE ${TRM_ENABLE_PROFILING}" EXCLUDE_FROM_ALL TRUE SYSTEM TRUE)
-#
-# CPMAddPackage( NAME argparse GITHUB_REPOSITORY p-ranav/argparse GIT_TAG v3.1 EXCLUDE_FROM_ALL TRUE
-# SYSTEM TRUE)
 
 CPMAddPackage(
   NAME glm
   GITHUB_REPOSITORY g-truc/glm
   GIT_TAG 1.0.1 EXCLUDE_FROM_ALL TRUE SYSTEM TRUE)
 
-# === Options ===
-# set(TRM_SCENE "BOX" CACHE STRING "Scene to render")
-
 # === Version Header ===
 string(TOUPPER ${PROJECT_NAME} PROJECT_NAME_UPPER)
 configure_file(version.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/include/trm/version.hpp)
 
 # === Executable ===
-
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c")
 file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS "*.hpp")
 list(APPEND HEADERS ${CMAKE_CURRENT_BINARY_DIR}/include/trm/version.hpp)

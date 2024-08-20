@@ -3,6 +3,7 @@
 
 #include <chrono>
 
+#include "error.hpp"
 #include "trm/config.hpp"
 #include "trm/image.hpp"
 #include "trm/scene.hpp"
@@ -43,15 +44,25 @@ namespace trm {
       }
     };
 
+    struct RenderStats {
+      std::string filename;
+      std::chrono::milliseconds total_time, batch_time;
+      std::uint32_t samples, batch_size;
+      Error error;
+    };
+
     Config cfg;
     Camera camera;
     Scene scene;
+    std::uint32_t target_samples = 0;
 
-    std::chrono::milliseconds render(ImageSet &img, std::uint32_t samples);
+    std::vector<RenderStats> render(std::string_view filename, ImageSet &img, std::uint32_t samples,
+                                    std::uint32_t batch_size, bool compute_error = true);
+    std::chrono::milliseconds render(ImageSet &img, std::uint32_t samples) const;
 
   private:
-    Pixel trace(const Ray &r, const std::size_t depth = 0);
-    std::tuple<Float, std::uint32_t> ray_march(const Ray &r);
+    Pixel trace(const Ray &r, const std::size_t depth = 0) const;
+    std::tuple<Float, std::uint32_t> ray_march(const Ray &r) const;
   };
 } // namespace trm
 

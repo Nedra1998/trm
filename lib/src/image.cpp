@@ -3,6 +3,7 @@
 #include <filesystem>
 
 #include "log.hpp"
+#include "version.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -107,7 +108,9 @@ std::vector<trm::Float> trm::Image::normalized() const {
     case Buffer::DEPTH:
       {
         Float min = *std::min_element(data.cbegin(), data.cend());
-        Float max = *std::max_element(data.cbegin(), data.cend()) * 0.95f;
+        Float max = *std::max_element(data.cbegin(), data.cend());
+        if (max >= 100.0f)
+          max *= 0.95f;
         std::transform(data.cbegin(), data.cend(), normalized_data.begin(),
                        [&](Float value) { return 1.0f - ((value - min) / (max - min)); });
         break;
@@ -138,3 +141,47 @@ trm::ImageSet::ImageSet(std::uint32_t width, std::uint32_t height, Buffer buffer
              ((buffers & Buffer::NORMAL) == Buffer::NORMAL) ? height : 0, Buffer::NORMAL),
       depth(((buffers & Buffer::DEPTH) == Buffer::DEPTH) ? width : 0,
             ((buffers & Buffer::DEPTH) == Buffer::DEPTH) ? height : 0, Buffer::DEPTH) {}
+
+std::string trm::ImageSet::fmt(std::string_view pattern, Buffer buffer) const {
+  return fmt::format(fmt::runtime(pattern), fmt::arg("buffer", buffer),
+                     fmt::arg("samples", samples), fmt::arg("width", width),
+                     fmt::arg("height", height), fmt::arg("commit", TRM_VERSION_COMMIT));
+}
+
+bool trm::ImageSet::write(std::string_view pattern, Buffer buffer) const {
+  PROFILE_ZONE();
+
+  bool result = true;
+  if ((buffer & Buffer::COLOR) == Buffer::COLOR && color.width != 0) {
+    result &= color.write(fmt(pattern, color.buffer));
+  }
+  if ((buffer & Buffer::ALBEDO) == Buffer::ALBEDO && albedo.width != 0) {
+    result &= albedo.write(fmt(pattern, albedo.buffer));
+  }
+  if ((buffer & Buffer::NORMAL) == Buffer::NORMAL && normal.width != 0) {
+    result &= normal.write(fmt(pattern, normal.buffer));
+  }
+  if ((buffer & Buffer::DEPTH) == Buffer::DEPTH && depth.width != 0) {
+    result &= depth.write(fmt(pattern, depth.buffer));
+  }
+
+  return result;
+}
+
+auto fmt::formatter<trm::Buffer>::format(trm::Buffer buf,
+                                         format_context &ctx) const -> format_context::iterator {
+  switch (buf) {
+    case trm::Buffer::COLOR:
+      return fmt::format_to(ctx.out(), "color");
+    case trm::Buffer::ALBEDO:
+      return fmt::format_to(ctx.out(), "albedo");
+    case trm::Buffer::NORMAL:
+      return fmt::format_to(ctx.out(), "normal");
+    case trm::Buffer::DEPTH:
+      return fmt::format_to(ctx.out(), "depth");
+    case trm::Buffer::ALL:
+      return fmt::format_to(ctx.out(), "all");
+    default:
+      return fmt::format_to(ctx.out(), "unknown");
+  }
+}

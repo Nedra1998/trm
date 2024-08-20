@@ -12,6 +12,7 @@ option(TRM_ENABLE_PROFILING "Enable profiling" OFF)
 option(TRM_ENABLE_SANITIZERS "Enable sanitizers" OFF)
 
 option(TRM_BUILD_DOCS "Build documentation" OFF)
+option(TRM_BUILD_EXAMPLES "Build example scenes" ON)
 option(TRM_BUILD_TESTS "Build unit tests" ON)
 
 # === Dependencies ===
@@ -30,6 +31,10 @@ add_subdirectory(lib)
 
 if(TRM_BUILD_TESTS)
   add_subdirectory("test")
+endif()
+
+if(TRM_BUILD_EXAMPLES)
+  add_subdirectory("examples")
 endif()
 
 if(TRM_BUILD_DOCS)

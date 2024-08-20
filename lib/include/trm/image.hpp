@@ -13,6 +13,8 @@
 #include <string_view>
 #include <vector>
 
+#include <fmt/base.h>
+
 #include "trm/float.hpp"
 
 namespace trm {
@@ -146,14 +148,14 @@ namespace trm {
     inline void set(std::size_t i, const Float &value) {
       if (width == 0 || height == 0)
         return;
-      data[i * depth] = value;
+      data[i * depth] += value;
     }
     inline void set(std::size_t i, const Vec3 &value) {
       if (width == 0 || height == 0)
         return;
-      data[i * depth + 0] = value.r;
-      data[i * depth + 1] = value.g;
-      data[i * depth + 2] = value.b;
+      data[i * depth + 0] += value.r;
+      data[i * depth + 1] += value.g;
+      data[i * depth + 2] += value.b;
     }
 
     inline Float &operator[](std::size_t index) { return data[index]; }
@@ -171,7 +173,7 @@ namespace trm {
   };
 
   struct ImageSet {
-    ImageSet(std::uint32_t width, std::uint32_t height, Buffer buffers);
+    ImageSet(std::uint32_t width, std::uint32_t height, Buffer buffers = Buffer::ALL);
 
     inline ImageSet *operator*=(const Float scalar) {
       color *= scalar;
@@ -183,7 +185,14 @@ namespace trm {
 
     std::uint32_t width, height, samples = 0;
     Image color, albedo, normal, depth;
+
+    std::string fmt(std::string_view pattern, Buffer buffer) const;
+    bool write(std::string_view pattern, Buffer buffer) const;
   };
 } // namespace trm
+
+template <> struct fmt::formatter<trm::Buffer> : fmt::formatter<string_view> {
+  auto format(trm::Buffer buf, format_context &ctx) const -> format_context::iterator;
+};
 
 #endif // TRM_IMAGE_HPP_
