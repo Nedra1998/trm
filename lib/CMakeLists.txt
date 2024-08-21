@@ -34,9 +34,7 @@ add_library(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_23)
-if(CMAKE_BUILD_TYPE MATCHES Debug)
-  target_compile_definitions(${PROJECT_NAME} PUBLIC -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
-endif()
+target_compile_definitions(${PROJECT_NAME} PUBLIC -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog fmt::fmt TracyClient glm::glm)
 target_include_directories(
   ${PROJECT_NAME}

@@ -10,6 +10,8 @@
 #ifndef TRM_FLOAT_HPP_
 #define TRM_FLOAT_HPP_
 
+#define GLM_LEFT_HANDED
+
 #include <glm/glm.hpp>
 
 namespace trm {

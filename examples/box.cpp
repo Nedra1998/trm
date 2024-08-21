@@ -1,17 +1,23 @@
+#include "trm/version.hpp"
 #define GLM_FORCE_SWIZZLE
+#include <fstream>
+
 #include <glm/gtc/matrix_transform.hpp>
+#include <spdlog/cfg/env.h>
 #include <trm/trm.hpp>
 
 using namespace trm;
 
 int main(int argc, char *argv[]) {
 
+  spdlog::cfg::load_env_levels();
+
   Renderer renderer;
   renderer.cfg = Config{.max_depth = 16,
                         .max_steps = 256,
                         .max_distance = 100.0f,
                         .epsilon = 0.001f,
-                        .bias = 0.001f,
+                        .bias = 0.01f,
                         .features = Feature::PROGRESS_REPORT};
   renderer.camera = Camera{
       .pos = {0.0f, 0.0f, -6.0f},
@@ -69,7 +75,28 @@ int main(int argc, char *argv[]) {
   // clang-format on
 
   ImageSet img(512, 512);
-  renderer.render("output/box/{buffer}.{samples:03d}.png", img, 128, 8, true);
+  const auto result =
+      renderer.render("output/box/{commit}.{buffer}.{samples:03d}.png", img, 128, 8, true);
+
+  std::fstream csv(fmt::format("output/box/{commit}.csv", fmt::arg("commit", TRM_VERSION_COMMIT)),
+                   std::ios::out | std::ios::trunc);
+  if (!csv.is_open()) {
+    LOG_ERROR("Failed to open CSV file");
+    return 1;
+  }
+
+  std::println(csv,
+               "filename,total_time,batch_time,samples,batch_size,error,absolute,squared,relative_"
+               "absolute,relative_squared");
+  for (const auto snapshot : result) {
+    std::println(csv, "{},{},{},{},{},{},{},{},{},{}", snapshot.filename,
+                 snapshot.total_time.count(), snapshot.batch_time.count(), snapshot.samples,
+                 snapshot.batch_size, snapshot.error.error, snapshot.error.absolute,
+                 snapshot.error.squared, snapshot.error.relative_absolute,
+                 snapshot.error.relative_squared);
+  }
+
+  LOG_INFO("Rendering complete, wrote data to output/box/{}.csv", TRM_VERSION_COMMIT);
 
   return 0;
 }

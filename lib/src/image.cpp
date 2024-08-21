@@ -44,7 +44,7 @@ bool trm::Image::write(std::string_view path) const {
 
   std::filesystem::path file = path;
   if (file.has_parent_path() && !std::filesystem::is_directory(file.parent_path())) {
-    LOG_DEBUG("Creating directory for file: {}", file.parent_path());
+    LOG_DEBUG("Creating directory for file: {}", file.parent_path().string());
     std::error_code err;
     if (!std::filesystem::create_directories(file.parent_path(), err)) {
       LOG_ERROR("Failed to create directory for file: {}", err.message());
