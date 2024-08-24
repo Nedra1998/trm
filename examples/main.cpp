@@ -1,15 +1,12 @@
+#include <filesystem>
 #include <fstream>
 
 #include <argparse/argparse.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <nlohmann/json.hpp>
 #include <spdlog/cfg/env.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <trm/trm.hpp>
-#include <trm/version.hpp>
 
-using json = nlohmann::json;
 using namespace trm;
 
 void scene(Renderer &renderer);
@@ -35,6 +32,7 @@ int main(int argc, char *argv[]) {
 
   spdlog::cfg::load_env_levels();
 
+  std::srand(std::time(nullptr));
   argparse::ArgumentParser program("trm", TRM_VERSION);
   program.add_argument("-r", "--resolution")
       .help("Resolution of the output impage")
@@ -43,18 +41,22 @@ int main(int argc, char *argv[]) {
       .scan<'u', std::uint32_t>();
   program.add_argument("-s", "--samples")
       .help("Number of samples per pixel")
-      .default_value((std::uint32_t)32)
+      .default_value((std::uint32_t)64)
       .scan<'u', std::uint32_t>();
   program.add_argument("-b", "--batch")
       .help("Number of samples per batch")
       .default_value((std::uint32_t)8)
       .scan<'u', uint32_t>();
+  program.add_argument("-S", "--seed")
+      .help("Seed for the random number generator")
+      .default_value((std::uint32_t)std::rand())
+      .scan<'x', uint32_t>();
   program.add_argument("-o", "--output")
       .help("Output file name pattern")
-      .default_value(std::string{"output/" EXAMPLE_NAME "_{commit}_{buffer}_{samples:03d}.png"});
-  program.add_argument("-j", "--json")
-      .help("Output file name pattern for the json output file")
-      .default_value(std::string{"output/" EXAMPLE_NAME "_{commit}.json"});
+      .default_value(std::string{"output/" EXAMPLE_NAME "_{commit}_{seed:08x}_{samples:03d}.png"});
+  program.add_argument("-d", "--data")
+      .help("Output file name pattern for the datafile")
+      .default_value(std::string{"output/" EXAMPLE_NAME ".csv"});
 
   try {
     program.parse_args(argc, argv);
@@ -64,7 +66,8 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  LOG_INFO("TRM v{}", TRM_VERSION);
+  trm::srand(program.get<std::uint32_t>("--seed"));
+  LOG_INFO("TRM v{} (seed={:08x})", TRM_VERSION, trm::seed);
 
   Renderer renderer;
   renderer.cfg = Config{.max_depth = 16,
@@ -83,28 +86,27 @@ int main(int argc, char *argv[]) {
                                       program.get<std::uint32_t>("--samples"),
                                       program.get<std::uint32_t>("--batch"), Buffer::COLOR);
 
-  std::string output = fmt::format(fmt::runtime(program.get<std::string>("--json")),
-                                   fmt::arg("commit", TRM_VERSION_COMMIT));
-  std::ofstream out(output);
-  json report = json::object();
-  report["commit"] = TRM_VERSION_COMMIT;
-  report["scene"] = EXAMPLE_NAME;
-
-  for (const auto &step : result) {
-    report["entries"].push_back({
-        {"samples", step.samples},
-        {"batchSize", step.batch_size},
-        {"file", step.filename},
-        {"totalTime", step.total_time.count()},
-        {"batchTime", step.batch_time.count()},
-    });
+  std::filesystem::path output = fmt::format(fmt::runtime(program.get<std::string>("--data")));
+  bool write_header = false;
+  if (!std::filesystem::exists(output)) {
+    if (!std::filesystem::is_directory(output.parent_path())) {
+      LOG_DEBUG("Creating directory: {}", output.parent_path().string());
+      std::filesystem::create_directories(output.parent_path());
+    }
+    write_header = true;
+  }
+  std::ofstream out(output, std::ios::app);
+  if (write_header) {
+    std::print(out, "commit,seed,filename,samples,time\n");
   }
 
   if (out.is_open()) {
-    out << report.dump() << std::endl;
+    for (const auto &step : result) {
+      std::print(out, "{},{:08x},{},{},{}\n", TRM_VERSION_COMMIT, trm::seed, step.filename,
+                 step.samples, step.total_time.count());
+    }
   } else {
-    LOG_ERROR("Failed to open output file: {}", output);
+    LOG_ERROR("Failed to open output file: {}", output.string());
   }
-
   return 0;
 }
