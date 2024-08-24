@@ -16,8 +16,10 @@
 namespace trm {
   /// @brief Random device used to seed the random number generator
   static std::random_device rd;
+  /// @brief Seed for the random number generator
+  extern std::uint32_t seed;
   /// @brief Mersenne Twister random number generator
-  static std::mt19937 gen(rd());
+  extern std::mt19937 gen;
   /// @brief Uniform integer distribution with range \f$[0, \text{INT_MAX}]\f$.
   static std::uniform_int_distribution<int> idist(0, std::numeric_limits<int>::max());
   /// @brief Uniform float distribution with range \f$[0, 1)\f$.
@@ -38,6 +40,16 @@ namespace trm {
    * @return Random float in the range \f$[\text{min}, \text{max})\f$
    */
   inline Float frand(const Float &min, const Float &max) { return dist(gen) * (max - min) + min; }
+
+  /**
+   * @brief Set the seed for the random number generator.
+   *
+   * @param s Value to set the seed to
+   */
+  inline void srand(const std::uint32_t &s) {
+    seed = s;
+    gen.seed(seed);
+  }
 } // namespace trm
 
 #endif // TRM_RAND_HPP_
