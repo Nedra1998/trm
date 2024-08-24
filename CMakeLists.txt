@@ -11,6 +11,7 @@ project(
 option(TRM_ENABLE_PROFILING "Enable profiling" OFF)
 option(TRM_ENABLE_SANITIZERS "Enable sanitizers" OFF)
 
+option(TRM_BUILD_EXEC "Build executable" ON)
 option(TRM_BUILD_DOCS "Build documentation" OFF)
 option(TRM_BUILD_EXAMPLES "Build example scenes" ON)
 option(TRM_BUILD_TESTS "Build unit tests" ON)
@@ -28,6 +29,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # === Targets ===
 add_subdirectory(lib)
+
+if(TRM_BUILD_EXEC)
+  add_subdirectory("bin")
+endif()
 
 if(TRM_BUILD_TESTS)
   add_subdirectory("test")
@@ -64,5 +69,7 @@ message(STATUS "Enable Profiling:    ${TRM_ENABLE_PROFILING}")
 message(STATUS "Enable Sanitizers:   ${TRM_ENABLE_SANITIZERS}")
 message(STATUS "")
 message(STATUS "Build Unit Tests:     ${TRM_BUILD_TESTS}")
+message(STATUS "Build Executable:     ${TRM_BUILD_EXEC}")
+message(STATUS "Build Examples:       ${TRM_BUILD_EXAMPLES}")
 message(STATUS "Build Documentation:  ${TRM_BUILD_DOCS}")
 message(STATUS "============================================")

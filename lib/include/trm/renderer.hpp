@@ -3,7 +3,6 @@
 
 #include <chrono>
 
-#include "error.hpp"
 #include "trm/config.hpp"
 #include "trm/image.hpp"
 #include "trm/scene.hpp"
@@ -48,7 +47,6 @@ namespace trm {
       std::string filename;
       std::chrono::milliseconds total_time, batch_time;
       std::uint32_t samples, batch_size;
-      Error error;
     };
 
     Config cfg;
@@ -57,7 +55,7 @@ namespace trm {
     std::uint32_t target_samples = 0;
 
     std::vector<RenderStats> render(std::string_view filename, ImageSet &img, std::uint32_t samples,
-                                    std::uint32_t batch_size, bool compute_error = true);
+                                    std::uint32_t batch_size, Buffer buffers = Buffer::ALL);
     std::chrono::milliseconds render(ImageSet &img, std::uint32_t samples) const;
 
   private:

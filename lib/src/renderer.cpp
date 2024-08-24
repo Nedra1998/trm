@@ -29,7 +29,7 @@ trm::Vec3 sample_hemisphere(const trm::Float &u1, const trm::Float &u2) {
 std::vector<trm::Renderer::RenderStats> trm::Renderer::render(std::string_view filename,
                                                               ImageSet &img, std::uint32_t samples,
                                                               std::uint32_t batch_size,
-                                                              bool compute_error) {
+                                                              Buffer buffers) {
   target_samples = samples;
   std::chrono::milliseconds total_time = std::chrono::milliseconds(0);
   std::vector<RenderStats> stats;
@@ -38,14 +38,13 @@ std::vector<trm::Renderer::RenderStats> trm::Renderer::render(std::string_view f
     const auto duration = render(img, batch);
     total_time += duration;
 
-    img.write(filename, Buffer::ALL);
+    img.write(filename, buffers);
     stats.push_back(RenderStats{
         .filename = img.fmt(filename, Buffer::COLOR),
         .total_time = total_time,
         .batch_time = duration,
         .samples = s + batch,
         .batch_size = batch,
-        .error = Error(),
     });
 
     if ((cfg.features & Feature::PROGRESS_REPORT) == Feature::PROGRESS_REPORT) {
@@ -66,24 +65,6 @@ std::vector<trm::Renderer::RenderStats> trm::Renderer::render(std::string_view f
                "[{:02d}:{:02d}:{:02d}<{:02d}:{:02d}:{:02d}]",
                s + batch, samples, duration.count(), 100.0f * percent, elapsed_hours,
                elapsed_minutes, elapsed_seconds, eta_hours, eta_minutes, eta_seconds);
-    }
-  }
-
-  if (compute_error) {
-    const std::optional<Image> reference_opt = Image::read(stats.back().filename);
-    if (!reference_opt.has_value()) {
-      LOG_ERROR("Failed to read reference image: {}", stats.back().filename);
-      return stats;
-    }
-    const Image &reference = reference_opt.value();
-    for (RenderStats &stat : stats) {
-      const std::optional<Image> test_opt = Image::read(stat.filename);
-      if (!test_opt.has_value()) {
-        LOG_ERROR("Failed to read test image: {}", stat.filename);
-        continue;
-      }
-      const Image &test = test_opt.value();
-      stat.error = compare(reference, test, ErrorMetric::ALL);
     }
   }
 
