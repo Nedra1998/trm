@@ -203,35 +203,49 @@ trm::Renderer::Pixel trm::Renderer::trace(const Ray &r, const std::size_t depth)
       }
     case Shading::REFRACTIVE:
       {
-        Float ior = (r.material == obj)
-                        ? (mat.ior / 1.0f)
-                        : ((r.material != 0) ? (scene.materials(r.material).ior / mat.ior)
-                                             : (1.0f / mat.ior));
-        Vec3 refracted = refract(r.d, normal, ior);
+        Float cior = (r.material != 0) ? scene.materials(r.material).ior : 1.0f;
+        Float nior = (r.material == obj) ? 1.0f : mat.ior;
+        Vec3 refracted = refract(r.d, normal, cior / nior);
         const auto pixel = trace(Ray(p + (cfg.bias * refracted), refracted,
                                      (r.material == 0 || r.material != obj) ? obj : 0),
                                  depth + 1);
         return Pixel{.color = pixel.color, .albedo = Vec3(1.0f), .normal = normal, .depth = t};
+        break;
       }
     case Shading::FRESNEL:
       {
         Float cior = (r.material != 0) ? scene.materials(r.material).ior : 1.0f;
+        Float nior = (r.material == obj) ? 1.0f : mat.ior;
+        Float r0 = (cior - nior) / (cior + nior);
+        r0 *= r0;
         Float cos_theta = dot(-r.d, normal);
-        Float r0 = (cior - mat.ior) / (cior + mat.ior);
-        r0 = r0 * r0;
-        Float fresnel = r0 + (1.0f - r0) * pow(1.0f - cos_theta, 5);
+        Float fresnel = 0.0;
+        if (cior > nior) {
+          Float n = cior / nior;
+          Float sin_theta = n * n * (1.0f - cos_theta * cos_theta);
+          if (sin_theta > 1.0f) {
+            fresnel = 1.0;
+          } else {
+            cos_theta = sqrt(1.0f - sin_theta);
+            fresnel = r0 + (1.0f - r0) * pow(1.0f - cos_theta, 5);
+          }
+        } else {
+          fresnel = r0 + (1.0f - r0) * pow(1.0f - cos_theta, 5);
+        }
 
         if (frand() < fresnel) {
           Vec3 reflected = normalize(reflect(r.d, normal));
-          const auto pixel = trace(Ray(p + (cfg.bias * reflected), reflected), depth + 1);
+          const auto pixel =
+              trace(Ray(p + (cfg.bias * reflected), reflected, r.material), depth + 1);
           return Pixel{.color = pixel.color, .albedo = pixel.color, .normal = normal, .depth = t};
         } else {
-          Vec3 refracted = refract(r.d, (r.material == obj) ? -normal : normal, cior / mat.ior);
+          Vec3 refracted = normalize(refract(r.d, normal, cior / nior));
           const auto pixel = trace(Ray(p + (cfg.bias * refracted), refracted,
                                        (r.material == 0 || r.material != obj) ? obj : 0),
                                    depth + 1);
           return Pixel{.color = pixel.color, .albedo = Vec3(1.0f), .normal = normal, .depth = t};
         }
+        break;
       }
   }
 
