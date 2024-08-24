@@ -3,6 +3,7 @@
 #include <filesystem>
 
 #include "log.hpp"
+#include "rand.hpp"
 #include "version.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -21,6 +22,7 @@ std::optional<trm::Image> trm::Image::read(std::string_view path) {
     return std::nullopt;
   }
 
+  stbi_set_flip_vertically_on_load(true);
   int width, height, channels;
   float *data = nullptr;
   {
@@ -145,7 +147,8 @@ trm::ImageSet::ImageSet(std::uint32_t width, std::uint32_t height, Buffer buffer
 std::string trm::ImageSet::fmt(std::string_view pattern, Buffer buffer) const {
   return fmt::format(fmt::runtime(pattern), fmt::arg("buffer", buffer),
                      fmt::arg("samples", samples), fmt::arg("width", width),
-                     fmt::arg("height", height), fmt::arg("commit", TRM_VERSION_COMMIT));
+                     fmt::arg("height", height), fmt::arg("commit", TRM_VERSION_COMMIT),
+                     fmt::arg("seed", trm::seed));
 }
 
 bool trm::ImageSet::write(std::string_view pattern, Buffer buffer) const {

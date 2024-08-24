@@ -14,6 +14,7 @@
 #include "trm/float.hpp"
 #include "trm/log.hpp"
 #include "trm/material.hpp"
+#include "trm/rand.hpp"
 #include "trm/renderer.hpp"
 #include "trm/scene.hpp"
 #include "trm/version.hpp"

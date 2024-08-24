@@ -24,12 +24,13 @@ namespace trm {
    */
   enum struct ErrorMetric : std::uint8_t {
     // clang-format off
-    ERROR             = 0b00001, ///< \f$i - r\f$
-    ABSOLUTE          = 0b00010, ///< \f$|i - r|\f$
-    SQUARED           = 0b00100, ///< \f$(i - r)^2\f$
-    RELATIVE_ABSOLUTE = 0b01000, ///< \f$\frac{|i - r|}{r + 0.01}\f$
-    RELATIVE_SQUARED  = 0b10000, ///< \f$\frac{(i - r)^2}{r^2 + 0.01}\f$
-    ALL               = 0b11111, ///< All metrics
+    ERROR             = 0b000001, ///< \f$i - r\f$
+    ABSOLUTE          = 0b000010, ///< \f$|i - r|\f$
+    SQUARED           = 0b000100, ///< \f$(i - r)^2\f$
+    RELATIVE_ABSOLUTE = 0b001000, ///< \f$\frac{|i - r|}{r + 0.01}\f$
+    RELATIVE_SQUARED  = 0b010000, ///< \f$\frac{(i - r)^2}{r^2 + 0.01}\f$
+    DELTA_E           = 0b100000, ///< \f$\Delta E\f$ perceptual error
+    ALL               = 0b111111, ///< All metrics
     // clang-format on
   };
 
@@ -52,7 +53,7 @@ namespace trm {
    */
   struct Error {
     float error = 0.0f, absolute = 0.0f, squared = 0.0f, relative_absolute = 0.0f,
-          relative_squared = 0.0f;
+          relative_squared = 0.0f, delta_e = 0.0f;
   };
 
   /**
