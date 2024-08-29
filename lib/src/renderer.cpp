@@ -30,6 +30,7 @@ std::vector<trm::Renderer::RenderStats> trm::Renderer::render(std::string_view f
                                                               ImageSet &img, std::uint32_t samples,
                                                               std::uint32_t batch_size,
                                                               Buffer buffers) {
+  PROFILE_ZONE();
   target_samples = samples;
   std::chrono::milliseconds total_time = std::chrono::milliseconds(0);
   std::vector<RenderStats> stats;
@@ -153,6 +154,11 @@ trm::Renderer::Pixel trm::Renderer::trace(const Ray &r, const std::size_t depth)
   Vec3 p = r.o + r.d * t;
   Vec3 normal = (r.material == obj) ? -scene.normal(p, obj) : scene.normal(p, obj);
   Material mat = scene.materials(obj);
+
+  if (any(isnan(normal))) {
+    LOG_DEBUG("Normal is NaN obj={} p=({}, {}, {})", obj, p.x, p.y, p.z);
+    return Pixel();
+  }
 
   switch (mat.shading) {
     case Shading::EMISSIVE:

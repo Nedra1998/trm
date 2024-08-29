@@ -145,11 +145,24 @@ namespace trm {
      */
     std::string md5() const;
 
+    /**
+     * @brief Set the value at a given index in the image data.
+     *
+     * @param i Index in the image data.
+     * @param value Value to set at the index.
+     */
     inline void set(std::size_t i, const Float &value) {
       if (width == 0 || height == 0)
         return;
       data[i * depth] += value;
     }
+
+    /**
+     * @brief Set the color value at a given pixel index in the image data.
+     *
+     * @param i The index of the pixel in the image data.
+     * @param value Color value to set at the index.
+     */
     inline void set(std::size_t i, const Vec3 &value) {
       if (width == 0 || height == 0)
         return;
@@ -158,8 +171,20 @@ namespace trm {
       data[i * depth + 2] += value.b;
     }
 
+    /**
+     * @brief Get the value at a given index in the image data.
+     *
+     * @param index Index in the image data.
+     * @return Value at the index in the image data.
+     */
     inline Float &operator[](std::size_t index) { return data[index]; }
 
+    /**
+     * @brief Scale the image data by a scalar.
+     *
+     * @param scalar Scalar value to multiply the image data by.
+     * @return The image with the data scaled by the scalar.
+     */
     inline Image &operator*=(const Float scalar) {
       for (auto &d : data) {
         d *= scalar;
@@ -167,26 +192,83 @@ namespace trm {
       return *this;
     }
 
-    std::uint32_t width, height, depth;
-    Buffer buffer;
-    std::vector<Float> data;
+    std::uint32_t width;     ///< Width of the image in pixels.
+    std::uint32_t height;    ///< Height of the image in pixels.
+    std::uint32_t depth;     ///< Number of channels in the image.
+    Buffer buffer;           ///< Buffer type of the image.
+    std::vector<Float> data; ///< Underlying image data.
   };
 
+  /**
+   * @class ImageSet
+   * @brief Collection of images representing different buffer types.
+   *
+   * This is a collection of different images for the different buffer types. It is used to store
+   * the output from rendering, as the auxilirary buffers can frequently be used for additional
+   * post-processing. The buffers are all optional, so if a buffer is not needed, it can be left
+   * empty.
+   *
+   * @see Buffer
+   */
   struct ImageSet {
+    /**
+     * @brief Create a new ImageSet with the given width, height, and configured buffers.
+     *
+     * @param width Width of the images in pixels.
+     * @param height Height of the images in pixels.
+     * @param buffers Buffer types to create images for.
+     */
     ImageSet(std::uint32_t width, std::uint32_t height, Buffer buffers = Buffer::ALL);
 
-    inline ImageSet *operator*=(const Float scalar) {
+    /**
+     * @brief Scale all the images in the set by a scalar.
+     *
+     * @param scalar Scalar value to multiply the images by.
+     * @return The image set with the images scaled by the scalar.
+     */
+    inline ImageSet &operator*=(const Float scalar) {
       color *= scalar;
       albedo *= scalar;
       normal *= scalar;
       depth *= scalar;
-      return this;
+      return *this;
     }
 
-    std::uint32_t width, height, samples = 0;
-    Image color, albedo, normal, depth;
+    std::uint32_t width;       ///< Width of the images in pixels.
+    std::uint32_t height;      ///< Height of the images in pixels.
+    std::uint32_t samples = 0; ///< Number of samples that have been rendered for the image set.
+    Image color;               ///< Color image buffer.
+    Image albedo;              ///< Albedo image buffer.
+    Image normal;              ///< Normal image buffer.
+    Image depth;               ///< Depth image buffer.
 
+    /**
+     * @brief Format a string with image set variables.
+     *
+     * This function is used to format a string that can be used when writing out images to a file.
+     * It uses the `fmt` library to apply formatting, and several variables are available for use in
+     * the format string:
+     * - `buffer`: The buffer type of the image set.
+     * - `samples`: The number of samples that have been rendered.
+     * - `width`: The width of the images in pixels.
+     * - `height`: The height of the images in pixels.
+     * - `commit`: The commit hash of the curremt TRM version.
+     * - `seed`: The seed used to generate the image set.
+     *
+     * @param pattern The pattern string to format.
+     * @param buffer The buffer type to include in the format string.
+     */
     std::string fmt(std::string_view pattern, Buffer buffer) const;
+
+    /**
+     * @brief Write out the images in the set to disk.
+     *
+     * @param pattern Format pattern used for the output file names.
+     * @param buffer The buffers to write out to disk.
+     * @return `true` if all the images were written successfully, `false` otherwise.
+     *
+     * @see ImageSet::fmt
+     */
     bool write(std::string_view pattern, Buffer buffer) const;
   };
 } // namespace trm

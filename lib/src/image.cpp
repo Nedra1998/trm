@@ -54,6 +54,8 @@ bool trm::Image::write(std::string_view path) const {
     }
   }
 
+  LOG_INFO("Writing image: {}", path);
+
   std::string_view extension = path.substr(path.find_last_of('.') + 1);
   std::vector<Float> data = normalized();
 

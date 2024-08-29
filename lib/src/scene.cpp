@@ -16,9 +16,9 @@ std::tuple<trm::Float, std::uint32_t> trm::Scene::sdf(const Vec3 &p) const {
 trm::Vec3 trm::Scene::normal(const Vec3 &p, std::uint32_t obj) const {
   const auto &func = sdfs_[obj - 1];
   Vec3 op = inv_transforms_[obj - 1] * Vec4(p, 1.0f);
-  return normalize(
-      transforms_[obj - 1] *
-      Vec4(func(Vec3(op.x + 0.0001f, op.y, op.z)) - func(Vec3(op.x - 0.0001f, op.y, op.z)),
-           func(Vec3(op.x, op.y + 0.0001f, op.z)) - func(Vec3(op.x, op.y - 0.0001f, op.z)),
-           func(Vec3(op.x, op.y, op.z + 0.0001f)) - func(Vec3(op.x, op.y, op.z - 0.0001f)), 0.0f));
+  return normalize(transforms_[obj - 1] *
+                   Vec4(func(Vec3(op.x + 5e-6f, op.y, op.z)) - func(Vec3(op.x - 5e-6f, op.y, op.z)),
+                        func(Vec3(op.x, op.y + 5e-6f, op.z)) - func(Vec3(op.x, op.y - 5e-6f, op.z)),
+                        func(Vec3(op.x, op.y, op.z + 5e-6f)) - func(Vec3(op.x, op.y, op.z - 5e-6f)),
+                        0.0f));
 }
