@@ -65,10 +65,10 @@ set ylabel 'Relative Squared Error'
 plot for [z=1:words(commit_seeds)] data using 4:((strcol(1) . "-" . strcol(2)) eq word(commit_seeds ,z) ? $10 : 1/0) with linespoints title word(commit_seeds,z)
 
 # Samples vs. Delta E
-set title 'Samples vs. {/Symbol D}E^*_{ab}'
+set title 'Samples vs. {/Symbol D}E'
 set output scene . '_samples_vs_delta_e.png'
 set xlabel 'Samples'
-set ylabel '{/Symbol D}E^*_{ab}'
+set ylabel '{/Symbol D}E'
 
 plot for [z=1:words(commit_seeds)] data using 4:((strcol(1) . "-" . strcol(2)) eq word(commit_seeds ,z) ? $11 : 1/0) with linespoints title word(commit_seeds,z)
 

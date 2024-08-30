@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
                         .max_steps = 256,
                         .max_distance = 1e3f,
                         .epsilon = 1e-5f,
-                        .bias = 2e-5f,
+                        .bias = 5e-5f,
                         .features = Feature::PROGRESS_REPORT};
 
   scene(renderer);
