@@ -100,10 +100,9 @@ namespace trm {
       std::uint32_t batch_size; ///< The number of samples within the current snapshot batch.
     };
 
-    Config cfg;                       ///< Configuration for the renderer.
-    Camera camera;                    ///< Camera used to render the scene.
-    Scene scene;                      ///< The scene to render.
-    std::uint32_t target_samples = 0; ///< Target number of samples to render.
+    const Config cfg;    ///< Configuration for the renderer.
+    const Camera camera; ///< Camera used to render the scene.
+    const Scene scene;   ///< The scene to render.
 
     /**
      * @brief Progressive rendering of the scene, saving snapshots at fixed intervals.

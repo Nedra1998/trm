@@ -3,11 +3,35 @@
 
 #include <chrono>
 
+#include <fmt/base.h>
 #include <glm/gtc/matrix_transform.hpp>
+
+#ifdef _OPENMP
+#  include <omp.h>
+#endif
 
 #include "log.hpp"
 #include "rand.hpp"
 #include "renderer.hpp"
+
+#ifdef _OPENMP
+template <> struct fmt::formatter<omp_sched_t> : fmt::formatter<string_view> {
+  auto format(omp_sched_t kind, format_context &ctx) const -> format_context::iterator {
+    switch (kind) {
+      case omp_sched_static:
+        return fmt::format_to(ctx.out(), "static");
+      case omp_sched_dynamic:
+        return fmt::format_to(ctx.out(), "dynamic");
+      case omp_sched_guided:
+        return fmt::format_to(ctx.out(), "guided");
+      case omp_sched_auto:
+        return fmt::format_to(ctx.out(), "auto");
+      default:
+        return fmt::format_to(ctx.out(), "unknown");
+    }
+  }
+};
+#endif
 
 void construct_basis(const trm::Vec3 &v1, trm::Vec3 &v2, trm::Vec3 &v3) {
   if (fabs(v1.x) > fabs(v1.y)) {
@@ -31,7 +55,6 @@ std::vector<trm::Renderer::RenderStats> trm::Renderer::render(std::string_view f
                                                               std::uint32_t batch_size,
                                                               Buffer buffers) {
   PROFILE_ZONE();
-  target_samples = samples;
   std::chrono::milliseconds total_time = std::chrono::milliseconds(0);
   std::vector<RenderStats> stats;
   for (std::uint32_t s = 0; s < samples; s += batch_size) {
@@ -87,7 +110,20 @@ std::chrono::milliseconds trm::Renderer::render(ImageSet &img, std::uint32_t sam
   }
   std::uint16_t progress = 0;
 
+#ifdef _OPENMP
+  omp_sched_t kind;
+  int chunk_size;
+  omp_get_schedule(&kind, &chunk_size);
+  if (kind == omp_sched_dynamic && chunk_size == 1) {
+    chunk_size = 1024;
+    omp_set_schedule(omp_sched_dynamic, 1024);
+  }
+  LOG_DEBUG("OpenMP schedule kind={} chunk_size={}", kind, chunk_size);
+#  pragma omp parallel for schedule(runtime) shared(img)
   for (std::size_t i = 0; i < img.width * img.height; ++i) {
+#else
+  for (std::size_t i = 0; i < img.width * img.height; ++i) {
+#endif
     std::size_t x = i % img.width;
     std::size_t y = i / img.width;
 
@@ -102,35 +138,6 @@ std::chrono::milliseconds trm::Renderer::render(ImageSet &img, std::uint32_t sam
     img.albedo.set(i, pixel.albedo);
     img.normal.set(i, pixel.normal);
     img.depth.set(i, pixel.depth);
-
-    if ((cfg.features & Feature::PROGRESS_REPORT) == Feature::PROGRESS_REPORT && (i % 1000 == 0) &&
-        (100 * i) / (img.width * img.height) != progress) {
-      const float percent = static_cast<float>(i) / static_cast<float>(img.width * img.height);
-      float tpercent = percent;
-      if (target_samples != 0) {
-        tpercent /= (static_cast<float>(target_samples) / static_cast<float>(samples));
-        tpercent += (static_cast<float>(img.samples) / static_cast<float>(target_samples));
-      }
-      const auto elapsed = std::chrono::high_resolution_clock::now() - start;
-      const std::uint32_t elapsed_hours =
-          std::chrono::duration_cast<std::chrono::hours>(elapsed).count();
-      const std::uint32_t elapsed_minutes =
-          std::chrono::duration_cast<std::chrono::minutes>(elapsed).count() % 60;
-      const std::uint32_t elapsed_seconds =
-          std::chrono::duration_cast<std::chrono::seconds>(elapsed).count() % 60;
-      const auto eta = (elapsed / percent) - elapsed;
-      const std::uint32_t eta_hours = std::chrono::duration_cast<std::chrono::hours>(eta).count();
-      const std::uint32_t eta_minutes =
-          std::chrono::duration_cast<std::chrono::minutes>(eta).count() % 60;
-      const std::uint32_t eta_seconds =
-          std::chrono::duration_cast<std::chrono::seconds>(eta).count() % 60;
-
-      progress = (100 * i) / (img.width * img.height);
-
-      LOG_DEBUG("Rendering {:6.2f}% [{:02d}:{:02d}:{:02d}<{:02d}:{:02d}:{:02d}]", 100.0f * tpercent,
-                elapsed_hours, elapsed_minutes, elapsed_seconds, eta_hours, eta_minutes,
-                eta_seconds);
-    }
   }
 
   img.samples += samples;
@@ -156,7 +163,7 @@ trm::Renderer::Pixel trm::Renderer::trace(const Ray &r, const std::size_t depth)
   Material mat = scene.materials(obj);
 
   if (any(isnan(normal))) {
-    LOG_DEBUG("Normal is NaN obj={} p=({}, {}, {})", obj, p.x, p.y, p.z);
+    LOG_WARN("Normal is NaN obj={} p=({}, {}, {})", obj, p.x, p.y, p.z);
     return Pixel();
   }
 

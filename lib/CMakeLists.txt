@@ -1,3 +1,7 @@
+# === Options ===
+
+option(TRM_USE_OPENMP "Use OpenMP for parallelization" ON)
+
 # === Dependencies ===
 CPMAddPackage(
   NAME fmt
@@ -21,6 +25,10 @@ CPMAddPackage(
   GITHUB_REPOSITORY g-truc/glm
   GIT_TAG 1.0.1 EXCLUDE_FROM_ALL TRUE SYSTEM TRUE)
 
+if(TRM_USE_OPENMP)
+  find_package(OpenMP REQUIRED)
+endif()
+
 # === Version Header ===
 string(TOUPPER ${PROJECT_NAME} PROJECT_NAME_UPPER)
 configure_file(version.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/include/trm/version.hpp)
@@ -40,3 +48,7 @@ target_include_directories(
   ${PROJECT_NAME}
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR}/include
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/trm ${CMAKE_CURRENT_BINARY_DIR}/include/trm)
+
+if(TRM_USE_OPENMP)
+  target_link_libraries(${PROJECT_NAME} PUBLIC OpenMP::OpenMP_CXX)
+endif()

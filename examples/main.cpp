@@ -7,9 +7,9 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include <trm/trm.hpp>
 
-using namespace trm;
+#include "example.hpp"
 
-void scene(Renderer &renderer);
+using namespace trm;
 
 int main(int argc, char *argv[]) {
 #if defined(_WIN32) || defined(_WIN64)
@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
       .scan<'u', std::uint32_t>();
   program.add_argument("-s", "--samples")
       .help("Number of samples per pixel")
-      .default_value((std::uint32_t)64)
+      .default_value((std::uint32_t)256)
       .scan<'u', std::uint32_t>();
   program.add_argument("-b", "--batch")
       .help("Number of samples per batch")
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
       .scan<'x', uint32_t>();
   program.add_argument("-o", "--output")
       .help("Output file name pattern")
-      .default_value(std::string{"output/" EXAMPLE_NAME "_{commit}_{seed:08x}_{samples:03d}.png"});
+      .default_value(std::string{"output/" EXAMPLE_NAME "_{commit}_{seed:08x}_{samples:04d}.png"});
   program.add_argument("-d", "--data")
       .help("Output file name pattern for the datafile")
       .default_value(std::string{"output/" EXAMPLE_NAME ".csv"});
@@ -69,15 +69,16 @@ int main(int argc, char *argv[]) {
   trm::srand(program.get<std::uint32_t>("--seed"));
   LOG_INFO("TRM v{} (seed={:08x})", TRM_VERSION, trm::seed);
 
-  Renderer renderer;
-  renderer.cfg = Config{.max_depth = 16,
-                        .max_steps = 256,
-                        .max_distance = 1e3f,
-                        .epsilon = 1e-5f,
-                        .bias = 5e-5f,
-                        .features = Feature::PROGRESS_REPORT};
-
-  scene(renderer);
+  Renderer renderer{
+      .cfg = Config{.max_depth = 16,
+                    .max_steps = 256,
+                    .max_distance = 1e3f,
+                    .epsilon = 1e-5f,
+                    .bias = 5e-5f,
+                    .features = Feature::PROGRESS_REPORT},
+      .camera = CAMERA,
+      .scene = SCENE,
+  };
 
   const auto resolution = program.get<std::vector<std::uint32_t>>("--resolution");
 
