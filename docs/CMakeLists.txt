@@ -13,6 +13,9 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/lib/include/*
 file(GLOB_RECURSE DOC_SOURCES CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/docs/*")
 list(APPEND DOC_SOURCES "${PROJECT_SOURCE_DIR}/LICENSE" "${PROJECT_SOURCE_DIR}/CHANGELOG.md")
 
+file(GLOB_RECURSE DOC_ASSETS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.png")
+message(STATUS "DOC_ASSETS: ${DOC_ASSETS}")
+
 # === Doxygen configuration ===
 
 # General Configuration
@@ -45,6 +48,7 @@ set(DOXYGEN_HTML_EXTRA_FILES
     "${doxygen-awesome-css_SOURCE_DIR}/doxygen-awesome-fragment-copy-button.js"
     "${doxygen-awesome-css_SOURCE_DIR}/doxygen-awesome-paragraph-link.js"
     "${doxygen-awesome-css_SOURCE_DIR}/doxygen-awesome-interactive-toc.js")
+list(APPEND DOXYGEN_HTML_EXTRA_FILES ${DOC_ASSETS})
 
 set(DOXYGEN_HTML_EXTRA_STYLESHEET
     "${doxygen-awesome-css_SOURCE_DIR}/doxygen-awesome.css"
@@ -55,3 +59,8 @@ set(DOXYGEN_HTML_EXTRA_STYLESHEET
 # === Doxygen target ===
 
 doxygen_add_docs(docs ${SOURCES} ${DOC_SOURCES})
+
+# add_custom_command( TARGET docs COMMENT "Copying assets for html documentation" POST_BUILD COMMAND
+# "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/html/docs/assets" COMMAND
+# "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/assets/logo.png"
+# "${CMAKE_CURRENT_BINARY_DIR}/html/docs/assets")

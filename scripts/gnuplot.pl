@@ -20,9 +20,9 @@ print commit_seeds
 set title 'Samples vs. Time'
 set output scene . '_samples_vs_time.png'
 set xlabel 'Samples'
-set ylabel 'Time (ms)'
+set ylabel 'Time (s)'
 
-plot for [z=1:words(commit_seeds)] data using 4:((strcol(1) . "-" . strcol(2)) eq word(commit_seeds ,z) ? $5 : 1/0) with linespoints title word(commit_seeds,z)
+plot for [z=1:words(commit_seeds)] data using 4:((strcol(1) . "-" . strcol(2)) eq word(commit_seeds ,z) ? $5 / 1000 : 1/0) with linespoints title word(commit_seeds,z)
 
 # Samples vs. Error
 set title 'Samples vs. Error'
