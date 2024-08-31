@@ -14,8 +14,8 @@ ceiling light. The walls of the box are colored differently.
 
 <details>
   <summary>Statistics</summary>
-  ![box_time](box_samples_vs_time.png)
-  ![box_deltae](box_samples_vs_delta_e.png)
+  <img src="box_samples_vs_time.png" />
+  <img src="box_samples_vs_delta_e.png" />
 </details>
 
 ## Example 2: Basic Scene
@@ -29,8 +29,8 @@ simple scene that tests the core features of the renderer.
 
 <details>
   <summary>Statistics</summary>
-  ![basic_time](basic_samples_vs_time.png)
-  ![basic_deltae](basic_samples_vs_delta_e.png)
+  <img src="basic_samples_vs_time.png" />
+  <img src="basic_samples_vs_delta_e.png" />
 </details>
 
 ## Example 3: Spheres Scene
@@ -44,8 +44,8 @@ benchmark for performance.
 
 <details>
   <summary>Statistics</summary>
-  ![spheres_time](spheres_samples_vs_time.png)
-  ![spheres_deltae](spheres_samples_vs_delta_e.png)
+  <img src="spheres_samples_vs_time.png" />
+  <img src="spheres_samples_vs_delta_e.png" />
 </details>
 
 ## Example 4: Menger Sponge
