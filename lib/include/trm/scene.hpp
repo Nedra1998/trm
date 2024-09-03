@@ -54,6 +54,7 @@ namespace trm {
      */
     inline const Material &materials(std::uint32_t obj) const { return materials_[obj - 1]; }
 
+    Vec3 sky = Vec3(0.0f);             ///< Color of the sky.
     std::vector<Mat4> transforms_;     ///< Transformations of the objects in the scene.
     std::vector<Mat4> inv_transforms_; ///< Inverse transformations of the objects in the scene.
     std::vector<Material> materials_;  ///< Materials of the objects in the scene.

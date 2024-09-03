@@ -155,12 +155,14 @@ trm::Renderer::Pixel trm::Renderer::trace(const Ray &r, const std::size_t depth)
 
   const auto [t, obj] = ray_march(r);
   if (obj == 0) {
-    return Pixel();
+    return Pixel{.color = scene.sky};
   }
 
   Vec3 p = r.o + r.d * t;
-  Vec3 normal = (r.material == obj) ? -scene.normal(p, obj) : scene.normal(p, obj);
   Material mat = scene.materials(obj);
+  Vec3 normal = (mat.shading == Shading::EMISSIVE)
+                    ? Vec3(0.0f)
+                    : ((r.material == obj) ? -scene.normal(p, obj) : scene.normal(p, obj));
 
   if (any(isnan(normal))) {
     LOG_WARN("Normal is NaN obj={} p=({}, {}, {})", obj, p.x, p.y, p.z);
@@ -181,7 +183,7 @@ trm::Renderer::Pixel trm::Renderer::trace(const Ray &r, const std::size_t depth)
         Vec3 dir(dot(Vec3(xbasis.x, ybasis.x, normal.x), sample),
                  dot(Vec3(xbasis.y, ybasis.y, normal.y), sample),
                  dot(Vec3(xbasis.z, ybasis.z, normal.z), sample));
-        const auto pixel = trace(Ray(p + (cfg.bias * dir), dir), depth + 1);
+        const auto pixel = trace(Ray(p + (cfg.bias * dir), dir, r.material), depth + 1);
         return Pixel{.color = pixel.color * mat.color * dot(normal, dir) / Float(M_PI),
                      .albedo = mat.color,
                      .normal = normal,
@@ -191,7 +193,7 @@ trm::Renderer::Pixel trm::Renderer::trace(const Ray &r, const std::size_t depth)
     case Shading::SPECULAR:
       {
         Vec3 reflected = reflect(r.d, normal);
-        const auto pixel = trace(Ray(p + (cfg.bias * reflected), reflected), depth + 1);
+        const auto pixel = trace(Ray(p + (cfg.bias * reflected), reflected, r.material), depth + 1);
         return Pixel{.color = pixel.color, .albedo = pixel.color, .normal = normal, .depth = t};
         break;
       }
