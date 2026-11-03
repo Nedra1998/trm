@@ -7,6 +7,7 @@
 #include <spdlog/sinks/stdout_sinks.h>
 #include <trm/trm.hpp>
 #include <trm/version.hpp>
+#include <unistd.h>
 
 #include "commands.hpp"
 

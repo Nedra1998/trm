@@ -6,6 +6,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <trm/trm.hpp>
+#include <unistd.h>
 
 #include "example.hpp"
 

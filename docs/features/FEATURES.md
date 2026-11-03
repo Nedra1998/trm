@@ -27,7 +27,7 @@ the work will not be distributed evenly across the threads.
 
 To evaluate a good setting for the chunk size, I rendered the same scene (the
 [basic
-example](http://vega.lyra:9070/Arden/trm/src/commit/cdbfa4c20c926084c4a1c344a668089696cad68a/examples/basic.cpp))
+example](https://github.com/Nedra1998/trm/blob/cdbfa4c20c926084c4a1c344a668089696cad68a/examples/basic.cpp))
 and varied the chunk size and the number of samples between snapshots during
 rendering. Then examining the time per sample from each of the configurations.
 I've included the data below to show the results.
